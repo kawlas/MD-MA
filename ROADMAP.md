@@ -1,63 +1,20 @@
 # ROADMAP — MD MA
 
-Znane problemy i plan napraw.
-
 ---
 
-## ✅ Naprawione
+## 🟢 Do zrobienia
 
-### 1. Scroll sync nierównomierny (split view)
-**Fix:** Block-based position mapping zamiast ratio. Edytor → preview: znajduje blok (`parseBlocks`) na pozycji scrolla, interpoluje pozycję w obrębie bloku używając rzeczywistej wysokości DOM. Preview → editor: znajduje blok na górze widoku (`data-source-start-line`), ustawia `scrollTop` na linię startową.
+### 1. Notaryzacja macOS
+Obecnie ad-hoc signed — dodać `APPLE_ID` + `APPLE_PASSWORD` do GitHub Secrets i notaryzację w `tauri.yml`.
 
-### 2. Toolbar — przy <400px
-**Fix:** Klasa `.hide-narrow` na logo, filename, PDF, Copy, Focus. `display: none !important` przy ≤480px. Dodatkowy breakpoint ≤400px: `gap: 1px`, `min-height: 36px`, padding 2px na przyciskach.
+### 2. Obrazki — lazy loading + zoom
+Przy wielu obrazkach w dokumencie: lazy loading i kliknięcie powiększające.
 
-### 3. Formatowanie — testy dla `formatInsertion`
-**Fix:** Czysta funkcja `formatInsertion(syntax, val, start, end)` w `types.ts`. 12 testów: 4 syntax × (no selection / with selection), w tym poprawiony cursor dla link (był off by 1).
+### 3. Spellcheck w CodeEditor
+Wbudowany spellcheck przeglądarki (`spellcheck` atrybut) — sprawdzić czy działa z contentEditable-fallback.
 
-### 4. macOS Menu — Cmd+W Close Window
-**Fix:** Dodano `close_window` w Rust (`MenuItemBuilder` z `CmdOrCtrl+W`), relay do frontendu przez `menu-event`. Frontend: `getCurrentWindow().close()`.
-
-### 5. .txt/.md interop — konwersja na plain text
-**Fix:** Czysta funkcja `stripMarkdown(md)` w `types.ts` (12 testów). Użyta w `handleSaveAs` — przy zapisie jako .txt treść jest stripowana z markdown.
-
----
-
-## 🟡 Do zrobienia (średnie)
-
-### 6. Automatyczne odświeżanie localStorage
-**Problem:** Przy szybkim pisaniu `setMarkdown` + `localStorage.setItem` na każdej zmianie może być nieefektywne. Plan: dodać debounce na zapis do localStorage.
-
-### 7. Drag & drop zewnętrznych plików  
-**Problem:** Działa tylko dla .md i .txt. Można dodać obsługę .html, .json, .csv.
-
-### 8. i18n
-**Problem:** Cały UI po angielsku. Dodać polski i inne języki?
-
-### 9. CI/CD dla Tauri
-**Problem:** Tauri build tylko lokalnie. Dodać GitHub Actions dla macOS build.
-
-### 10. Preferences dialog
-**Problem:** Brak dedykowanego okna preferencji. Obecnie wszystko jest w settings panelu (gear).
-
----
-
-## 🟢 Kosmetyczne / Future
-
-### 6. Automatyczne odświeżanie localStorage
-Problem: Przy szybkim pisaniu `setMarkdown` + `localStorage.setItem` na każdej zmianie może być nieefektywne. Plan: dodać debounce na zapis do localStorage.
-
-### 7. Drag & drop zewnętrznych plików  
-Problem: Działa tylko dla .md i .txt. Można dodać obsługę .html, .json, .csv.
-
-### 8. i18n
-Problem: Cały UI po angielsku. Dodać polski i inne języki?
-
-### 9. CI/CD dla Tauri
-Problem: Tauri build tylko lokalnie. Dodać GitHub Actions dla macOS build.
-
-### 10. Preferences dialog
-Problem: Brak dedykowanego okna preferencji. Obecnie wszystko jest w settings panelu (gear).
+### 4. Skróty klawiszowe w Command Palette
+Wyświetlać skróty obok komend w palecie (Cmd+S, Cmd+Z itp.).
 
 ---
 
@@ -65,14 +22,29 @@ Problem: Brak dedykowanego okna preferencji. Obecnie wszystko jest w settings pa
 
 | Metryka | Wartość |
 |---|---|
-| Pliki źródłowe | 12 (TSX/TS/CSS) |
-| Linie kodu | ~3648 |
-| Testy | 63 |
-| Komponenty React | 7 |
-| Motywy | 10 + custom |
-| Font sety | 5 |
-| Skróty klawiszowe | 10 |
+| Pliki źródłowe | 14 (TSX/TS/CSS) |
+| Linie kodu | ~3900 |
+| Testy | 80 |
+| Komponenty React | 9 |
+| Motywy | 10 + custom + 6 community |
+| Font sety | 8 |
+| Skróty klawiszowe | 13 |
+| Build (single‑file) | 649 kB |
+| DMG | 3.3 MB (ad-hoc signed) |
 
 ---
 
-Ostatnia aktualizacja: 30 maja 2026 (iteracja 6)
+## Decision log
+
+| Decyzja | Uzasadnienie |
+|---|---|
+| Block editing over contentEditable | Zachowuje wierność markdown, czystsza architektura |
+| Origin-tracking flags + block-based scroll sync | Całkowicie eliminuje feedback loop scrolla |
+| System fonts | Mały binary, natywny wygląd, single‑file output |
+| Tauri 2 over Electron | Mniejszy binary (~3.4 MB), natywne menu, ad-hoc signing |
+| SettingsDialog as modal | Lepsze UX dla preview motywów i przełącznika języka |
+| Preview debounce 200ms | ReactMarkdown jest ciężki — nie re-renderuje na każdym znaku |
+| `previewBlocksRef` for scroll sync | Zapewnia zgodność bloków z DOM (który renderuje `previewMarkdown`) |
+| Block-based scroll sync obu kierunków | Ratio-based powodował skoki przy różnej wysokości bloków |
+
+Ostatnia aktualizacja: 30 maja 2026 (iteracja 9)

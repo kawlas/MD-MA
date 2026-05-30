@@ -7,22 +7,27 @@ import EditablePreview from '@/components/EditablePreview';
 import TableOfContents from '@/components/TableOfContents';
 import StatusBar from '@/components/StatusBar';
 import CommandPalette from '@/components/CommandPalette';
+import SettingsDialog from '@/components/SettingsDialog';
 import {
   type ViewMode,
   type ThemeName,
   type EffectiveTheme,
   type ThemeVars,
   type FontSet,
+  type Block,
   THEMES,
   FONT_SETS,
   SAMPLE_MARKDOWN,
   getEffectiveTheme,
-  parseBlocks,
   extractToc,
   stripMarkdown,
+  getDropFileType,
+  parseBlocks,
 } from '@/types';
+import { useT } from '@/i18n';
 
 function App() {
+  const _t = useT();
   const [markdown, setMarkdown] = useState(() => {
     try {
       const saved = localStorage.getItem('md-editor-content');
@@ -101,16 +106,27 @@ function App() {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
-  const syncLockRef = useRef(0);
   const dragCounterRef = useRef(0);
   const editorScrollRafRef = useRef<number | undefined>(undefined);
   const previewScrollRafRef = useRef<number | undefined>(undefined);
+  // Origin-tracking flags — prevent feedback loop when programmatic scrollTop fires scroll events (WebKit)
+  const editorScrollSuppressed = useRef(false);
+  const previewScrollSuppressed = useRef(false);
+  // Block map for scroll sync — kept in sync with previewMarkdown
+  const previewBlocksRef = useRef<Block[]>([]);
+  // Keep previewBlocks in sync with previewMarkdown
+  previewBlocksRef.current = useMemo(() => parseBlocks(previewMarkdown), [previewMarkdown]);
 
-  // Persist markdown to localStorage
+  // Persist markdown to localStorage (debounced 500ms)
+  const latestMdRef = useRef(markdown);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => { latestMdRef.current = markdown; });
   useEffect(() => {
-    try {
-      localStorage.setItem('md-editor-content', markdown);
-    } catch { /* ignore */ }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try { localStorage.setItem('md-editor-content', latestMdRef.current); } catch { /* ignore */ }
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [markdown]);
 
   // Persist theme
@@ -159,6 +175,8 @@ function App() {
   // Cleanup timers / RAFs on unmount
   useEffect(() => () => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (editorScrollRafRef.current) cancelAnimationFrame(editorScrollRafRef.current);
     if (previewScrollRafRef.current) cancelAnimationFrame(previewScrollRafRef.current);
   }, []);
@@ -166,7 +184,6 @@ function App() {
   // Compute effective theme and CSS variables
   const effectiveTheme: EffectiveTheme = useMemo(() => getEffectiveTheme(theme as ThemeName), [theme]);
   const themeVars = useMemo(() => customThemes[theme] || THEMES[effectiveTheme], [theme, customThemes, effectiveTheme]);
-  const blocks = useMemo(() => parseBlocks(markdown), [markdown]);
   const tocItems = useMemo(() => extractToc(markdown), [markdown]);
 
   // Listen for system theme changes
@@ -203,7 +220,7 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.name.toLowerCase().endsWith('.pdf')) {
-      showToast('PDF files are not supported — this app edits Markdown (.md) files only');
+      showToast(_t('app.toast.pdf_not_supported'));
       e.target.value = '';
       return;
     }
@@ -214,7 +231,7 @@ function App() {
       setPreviewMarkdown(content);
       setFileName(file.name);
       setIsModified(false);
-      showToast(`Opened: ${file.name}`);
+      showToast(`${_t('app.toast.opened')}: ${file.name}`);
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -226,7 +243,7 @@ function App() {
     setFileName(null);
     setIsModified(false);
     setPendingAction(null);
-    showToast('New document created');
+    showToast(_t('app.toast.new_document'));
   }, [showToast]);
 
   const handleNewFile = useCallback(() => {
@@ -244,11 +261,11 @@ function App() {
         suggestedName: suggested,
         types: [
           {
-            description: 'Markdown',
+            description: _t('app.filetype.markdown'),
             accept: { 'text/markdown': ['.md', '.markdown', '.mdown'] },
           },
           {
-            description: 'Plain Text',
+            description: _t('app.filetype.plain_text'),
             accept: { 'text/plain': ['.txt'] },
           },
         ],
@@ -271,7 +288,7 @@ function App() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         setIsModified(false);
-        showToast('File downloaded!');
+        showToast(_t('app.toast.downloaded'));
         return true;
       }
       const text = content(handle.name);
@@ -280,10 +297,10 @@ function App() {
       await writable.close();
       setFileName(handle.name);
       setIsModified(false);
-      showToast(`Saved: ${handle.name}`);
+      showToast(`${_t('app.toast.saved')}: ${handle.name}`);
       return true;
     } catch {
-      showToast('Save cancelled');
+      showToast(_t('app.toast.save_cancelled'));
       return false;
     }
   }, [markdown, fileName, showToast]);
@@ -306,7 +323,7 @@ function App() {
 
   // Export PDF via print
   const handleExportPdf = useCallback(() => {
-    showToast("Opening print dialog...");
+    showToast(_t('app.toast.printing'));
     setTimeout(() => window.print(), 100);
   }, [showToast]);
 
@@ -320,21 +337,21 @@ function App() {
   const handleSaveCustomTheme = useCallback(() => {
     const name = themeEditorName.trim();
     if (!name) {
-      showToast('Theme name is required');
+      showToast(_t('app.toast.theme_name_required'));
       return;
     }
     try {
       const vars = JSON.parse(themeEditorJson) as Record<string, string>;
       if (typeof vars !== 'object' || vars === null || !vars['--bg-primary']) {
-        showToast('Must at minimum define --bg-primary');
+        showToast(_t('app.toast.theme_bg_required'));
         return;
       }
       setCustomThemes(prev => ({ ...prev, [name]: vars }));
       setTheme(name);
       setShowThemeDialog(false);
-      showToast(`Theme "${name}" saved`);
+      showToast(`${_t('app.toast.theme_saved')}: ${name}`);
     } catch {
-      showToast('Invalid JSON');
+      showToast(_t('app.toast.theme_json_invalid'));
     }
   }, [themeEditorName, themeEditorJson, showToast, setCustomThemes, setTheme]);
 
@@ -345,7 +362,7 @@ function App() {
       return next;
     });
     if (theme === name) setTheme('system');
-    showToast(`Theme "${name}" deleted`);
+    showToast(`${_t('app.toast.theme_deleted')}: ${name}`);
   }, [theme, showToast, setTheme]);
 
   // Undo/Redo
@@ -385,7 +402,7 @@ function App() {
     setFontSet(FONT_SETS[0]);
     setFontSizeDelta(0);
     setLineHeightDelta(0);
-    showToast('Font reset to defaults');
+    showToast(_t('app.toast.font_reset'));
   }, [showToast]);
 
   const handleOpenSettings = useCallback(() => {
@@ -396,23 +413,11 @@ function App() {
     setShowSettingsPanel(false);
   }, []);
 
-  const settingsRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!showSettingsPanel) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setShowSettingsPanel(false);
-      }
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [showSettingsPanel]);
-
   // Copy rendered
   const handleCopyRendered = useCallback(async () => {
     const previewEl = previewRef.current;
     if (!previewEl) {
-      showToast('Switch to Preview or Split mode first');
+      showToast(_t('app.toast.preview_needed'));
       return;
     }
 
@@ -425,13 +430,13 @@ function App() {
           'text/plain': new Blob([text], { type: 'text/plain' }),
         }),
       ]);
-      showToast('Copied as rich text!');
+      showToast(_t('app.toast.copied_rich'));
     } catch {
       try {
         await navigator.clipboard.writeText(previewEl.innerText);
-        showToast('Copied as plain text');
+        showToast(_t('app.toast.copied_plain'));
       } catch {
-        showToast('Copy failed — try manually');
+        showToast(_t('app.toast.copy_failed'));
       }
     }
   }, [showToast]);
@@ -469,13 +474,41 @@ function App() {
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
 
-    const validTypes = ['.md', '.txt', '.markdown', '.mdown', '.mkd', '.mkdn', '.mdwn', '.mdtxt', '.mdtext'];
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!validTypes.includes(ext) && !file.type.startsWith('text/')) {
-      showToast('Please drop a .md or .txt file');
+    const fileType = getDropFileType(file.name, file.type);
+
+    if (fileType === 'image') {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const md = `![${file.name}](${dataUrl})`;
+        const editor = editorRef.current;
+        if (editor) {
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          const newValue = markdown.slice(0, start) + md + markdown.slice(end);
+          setMarkdown(newValue);
+          setPreviewMarkdown(newValue);
+          setIsModified(true);
+          requestAnimationFrame(() => {
+            const cursor = start + md.length;
+            editor.selectionStart = editor.selectionEnd = cursor;
+            editor.focus();
+          });
+        } else {
+          setMarkdown(prev => prev + '\n' + md);
+          setPreviewMarkdown(prev => prev + '\n' + md);
+          setIsModified(true);
+        }
+        showToast(`${_t('app.toast.image_added')}: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
       return;
     }
 
+    if (fileType !== 'text') {
+      showToast(_t('app.toast.drop_hint'));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const content = ev.target?.result as string;
@@ -483,17 +516,16 @@ function App() {
       setPreviewMarkdown(content);
       setFileName(file.name);
       setIsModified(false);
-      showToast(`Opened: ${file.name}`);
+      showToast(`${_t('app.toast.opened')}: ${file.name}`);
     };
     reader.readAsText(file);
-  }, [showToast]);
+  }, [markdown, showToast]);
 
   const getEditorLineHeight = useCallback((editor: HTMLTextAreaElement): number => {
-    const lineHeight = Number.parseFloat(window.getComputedStyle(editor).lineHeight);
-    return Number.isFinite(lineHeight) && lineHeight > 0 ? lineHeight : 22;
+    const lh = Number.parseFloat(window.getComputedStyle(editor).lineHeight);
+    return Number.isFinite(lh) && lh > 0 ? lh : 22;
   }, []);
 
-  // Ratio-based fallback for scroll sync
   const applyRatioSync = useCallback((
     source: { scrollTop: number; scrollHeight: number; clientHeight: number },
     target: HTMLElement,
@@ -504,68 +536,58 @@ function App() {
     return (source.scrollTop / maxSource) * maxTarget;
   }, []);
 
-  // Scroll sync — bidirectional block-anchor mapping with ratio fallback.
+  // Editor → Preview: block-based sync with interpolation within blocks.
   const handleEditorScroll = useCallback(() => {
-    if (Date.now() - syncLockRef.current < 50) return;
+    if (editorScrollSuppressed.current) { editorScrollSuppressed.current = false; return; }
     const editor = editorRef.current;
     if (!editor) return;
-
     const lineHeight = getEditorLineHeight(editor);
     const topLine = Math.max(0, Math.floor(editor.scrollTop / lineHeight));
     const activeHeading = [...tocItems].reverse().find(item => item.line <= topLine);
     setActiveHeadingId(activeHeading?.id);
-
     if (viewMode !== 'split') return;
     const preview = previewRef.current;
     if (!preview) return;
 
-    syncLockRef.current = Date.now();
-
-    // Try block-based sync first
-    const blockIndex = blocks.findIndex(block => topLine >= block.startLine && topLine <= block.endLine);
-    if (blockIndex >= 0) {
-      const block = blocks[blockIndex];
-      const currentEl = preview.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`);
-      if (currentEl) {
-        const blockLineSpan = Math.max(1, block.endLine - block.startLine + 1);
-        const linesIntoBlock = topLine - block.startLine;
-        let targetScrollTop = currentEl.offsetTop;
-
-        const nextBlock = blocks[blockIndex + 1];
-        if (nextBlock) {
-          const nextEl = preview.querySelector<HTMLElement>(`[data-block-id="${nextBlock.id}"]`);
-          if (nextEl) {
-            const blockHeightInPixels = nextEl.offsetTop - currentEl.offsetTop;
-            targetScrollTop += (linesIntoBlock / blockLineSpan) * blockHeightInPixels;
-            preview.scrollTop = targetScrollTop;
-            return;
-          }
-        } else {
-          const blockHeight = currentEl.offsetHeight;
-          if (blockHeight > 0) {
-            const targetPixelOffset = (linesIntoBlock / blockLineSpan) * blockHeight;
-            targetScrollTop += Math.min(targetPixelOffset, blockHeight - preview.clientHeight / 2);
-            preview.scrollTop = targetScrollTop;
-            return;
-          }
-        }
-        preview.scrollTop = targetScrollTop;
-        return;
+    // Use block map to find which preview block maps to the top editor line
+    const blocks = previewBlocksRef.current;
+    if (blocks.length === 0) return;
+    const blockIdx = blocks.findIndex(b => topLine >= b.startLine && topLine <= b.endLine);
+    if (blockIdx < 0) {
+      // Fallback: ratio-based
+      const target = applyRatioSync(editor, preview);
+      if (target !== null) { previewScrollSuppressed.current = true; preview.scrollTop = target; }
+      return;
+    }
+    const block = blocks[blockIdx];
+    const el = preview.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`);
+    if (!el) {
+      // Fallback: ratio-based
+      const target = applyRatioSync(editor, preview);
+      if (target !== null) { previewScrollSuppressed.current = true; preview.scrollTop = target; }
+      return;
+    }
+    const linesInto = topLine - block.startLine;
+    const span = Math.max(1, block.endLine - block.startLine + 1);
+    let targetTop = el.offsetTop;
+    const nextBlock = blocks[blockIdx + 1];
+    if (nextBlock) {
+      const nextEl = preview.querySelector<HTMLElement>(`[data-block-id="${nextBlock.id}"]`);
+      if (nextEl) {
+        targetTop += (linesInto / span) * (nextEl.offsetTop - el.offsetTop);
       }
+    } else if (el.offsetHeight > 0) {
+      targetTop += Math.min((linesInto / span) * el.offsetHeight, el.offsetHeight - preview.clientHeight / 3);
     }
+    previewScrollSuppressed.current = true;
+    preview.scrollTop = targetTop;
+  }, [viewMode, tocItems, getEditorLineHeight, applyRatioSync]);
 
-    // Fallback: ratio-based sync
-    const ratioTarget = applyRatioSync(editor, preview);
-    if (ratioTarget !== null) {
-      preview.scrollTop = ratioTarget;
-    }
-  }, [viewMode, blocks, tocItems, getEditorLineHeight, applyRatioSync]);
-
+  // Preview → Editor: find block at viewport top, map to editor line, set scrollTop.
   const handlePreviewScroll = useCallback(() => {
-    if (Date.now() - syncLockRef.current < 50) return;
+    if (previewScrollSuppressed.current) { previewScrollSuppressed.current = false; return; }
     const preview = previewRef.current;
     if (!preview) return;
-
     const blockElements = Array.from(preview.querySelectorAll<HTMLElement>('[data-block-id]'));
     if (blockElements.length === 0) return;
     const top = preview.scrollTop + 1;
@@ -574,31 +596,27 @@ function App() {
       if (el.offsetTop <= top) activeEl = el;
       else break;
     }
-
     const startLine = Number(activeEl.dataset.sourceStartLine) || 0;
     const activeHeading = [...tocItems].reverse().find(item => item.line <= startLine);
     setActiveHeadingId(activeHeading?.id);
-
     if (viewMode !== 'split') return;
     const editor = editorRef.current;
     if (!editor) return;
     const lineHeight = getEditorLineHeight(editor);
 
-    syncLockRef.current = Date.now();
-
-    // Calculate offset within block for more accurate mapping
     const endLineRaw = activeEl.dataset.sourceEndLine;
     const endLine = endLineRaw ? Number(endLineRaw) : startLine;
     const blockLineSpan = Math.max(1, endLine - startLine + 1);
     const blockOffset = top - activeEl.offsetTop;
     const blockHeight = activeEl.offsetHeight;
+    let targetLine: number;
     if (blockHeight > 0) {
-      const linesIntoBlock = Math.round((blockOffset / blockHeight) * blockLineSpan);
-      const targetLine = Math.max(0, startLine + Math.min(linesIntoBlock, blockLineSpan - 1));
-      editor.scrollTop = targetLine * lineHeight;
+      targetLine = startLine + Math.min(Math.round((blockOffset / blockHeight) * blockLineSpan), blockLineSpan - 1);
     } else {
-      editor.scrollTop = startLine * lineHeight;
+      targetLine = startLine;
     }
+    editorScrollSuppressed.current = true;
+    editor.scrollTop = targetLine * lineHeight;
   }, [viewMode, tocItems, getEditorLineHeight]);
 
   // Ref proxies — always call latest scroll handler
@@ -623,27 +641,96 @@ function App() {
     });
   }, []);
 
+  // After previewMarkdown catches up (200ms debounce), re-sync preview scroll to editor position.
+  // This prevents drift while content was being typed and DOM was stale.
+  useEffect(() => {
+    if (viewMode !== 'split') return;
+    const preview = previewRef.current;
+    const editor = editorRef.current;
+    if (!preview || !editor) return;
+    // Wait for next frame so DOM has settled from React re-render
+    requestAnimationFrame(() => {
+      if (editorScrollSuppressed.current) return;
+      const lh = getEditorLineHeight(editor);
+      const topLine = Math.max(0, Math.floor(editor.scrollTop / lh));
+      const blocks = previewBlocksRef.current;
+      const blockIdx = blocks.findIndex((b: Block) => topLine >= b.startLine && topLine <= b.endLine);
+      if (blockIdx >= 0) {
+        const pb = blocks[blockIdx];
+        const el = preview.querySelector<HTMLElement>(`[data-block-id="${pb.id}"]`);
+        if (el) {
+          const linesInto = topLine - pb.startLine;
+          const span = Math.max(1, pb.endLine - pb.startLine + 1);
+          let targetTop = el.offsetTop;
+          const next = blocks[blockIdx + 1];
+          if (next) {
+            const nextEl = preview.querySelector<HTMLElement>(`[data-block-id="${next.id}"]`);
+            if (nextEl) targetTop += (linesInto / span) * (nextEl.offsetTop - el.offsetTop);
+          } else if (el.offsetHeight > 0) {
+            targetTop += Math.min((linesInto / span) * el.offsetHeight, el.offsetHeight - preview.clientHeight / 2);
+          }
+          previewScrollSuppressed.current = true;
+          preview.scrollTop = targetTop;
+          return;
+        }
+      }
+      // Fallback ratio
+      const maxE = editor.scrollHeight - editor.clientHeight;
+      const maxP = preview.scrollHeight - preview.clientHeight;
+      if (maxE > 0 && maxP > 0) {
+        previewScrollSuppressed.current = true;
+        preview.scrollTop = (editor.scrollTop / maxE) * maxP;
+      }
+    });
+  }, [previewMarkdown, viewMode, getEditorLineHeight]);
+
+  // Split resize drag handler
+  const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const container = splitContainerRef.current;
+    if (!container) return;
+    const startX = e.clientX;
+    const startRatio = splitRatio;
+    const containerWidth = container.offsetWidth;
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const ratio = Math.max(0.15, Math.min(0.85, startRatio + dx / containerWidth));
+      setSplitRatio(ratio);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [splitRatio]);
+
   // Command palette commands
   const paletteCommands = useMemo<{ id: string; label: string; category: string; shortcut?: string; action: () => void }[]>(() => [
-    { id: 'view-code', label: 'Code View', category: 'View', shortcut: '⌘1', action: () => setViewMode('code') },
-    { id: 'view-preview', label: 'Preview View', category: 'View', shortcut: '⌘2', action: () => setViewMode('preview') },
-    { id: 'view-split', label: 'Split View', category: 'View', shortcut: '⌘3', action: () => setViewMode('split') },
-    { id: 'toggle-focus', label: 'Toggle Focus Mode', category: 'View', shortcut: '⌘⇧F', action: () => setIsFocusMode(p => !p) },
-    { id: 'toggle-outline', label: 'Toggle Outline', category: 'View', shortcut: '⌘⇧T', action: () => setShowToc(p => !p) },
-    { id: 'new-file', label: 'New File', category: 'File', shortcut: '⌘N', action: handleNewFile },
-    { id: 'open-file', label: 'Open File', category: 'File', shortcut: '⌘O', action: handleOpenFile },
-    { id: 'save', label: 'Save', category: 'File', shortcut: '⌘S', action: handleSaveAs },
-    { id: 'save-as', label: 'Save As', category: 'File', shortcut: '⌘⇧S', action: handleSaveAs },
-    { id: 'export-pdf', label: 'Export PDF', category: 'Export', shortcut: '⌘⇧P', action: handleExportPdf },
-    { id: 'copy-rtf', label: 'Copy as Rich Text', category: 'Export', shortcut: '⌘⇧C', action: handleCopyRendered },
-    { id: 'undo', label: 'Undo', category: 'Edit', shortcut: '⌘Z', action: handleUndo },
-    { id: 'redo', label: 'Redo', category: 'Edit', shortcut: '⌘⇧Z', action: handleRedo },
-    { id: 'font-inc', label: 'Increase Font Size', category: 'Font', action: handleIncreaseFontSize },
-    { id: 'font-dec', label: 'Decrease Font Size', category: 'Font', action: handleDecreaseFontSize },
-    { id: 'font-reset', label: 'Reset Font', category: 'Font', action: handleResetFont },
-    { id: 'line-inc', label: 'Increase Line Height', category: 'Font', action: handleIncreaseLineHeight },
-    { id: 'line-dec', label: 'Decrease Line Height', category: 'Font', action: handleDecreaseLineHeight },
-    { id: 'settings', label: 'Open Settings', category: 'App', action: handleOpenSettings },
+    { id: 'view-code', label: _t('palette.code_view'), category: _t('palette.view'), shortcut: '⌘1', action: () => setViewMode('code') },
+    { id: 'view-preview', label: _t('palette.preview_view'), category: _t('palette.view'), shortcut: '⌘2', action: () => setViewMode('preview') },
+    { id: 'view-split', label: _t('palette.split_view'), category: _t('palette.view'), shortcut: '⌘3', action: () => setViewMode('split') },
+    { id: 'toggle-focus', label: _t('palette.toggle_focus'), category: _t('palette.view'), shortcut: '⌘⇧F', action: () => setIsFocusMode(p => !p) },
+    { id: 'toggle-outline', label: _t('palette.toggle_outline'), category: _t('palette.view'), shortcut: '⌘⇧T', action: () => setShowToc(p => !p) },
+    { id: 'new-file', label: _t('palette.new_file'), category: _t('palette.file'), shortcut: '⌘N', action: handleNewFile },
+    { id: 'open-file', label: _t('palette.open_file'), category: _t('palette.file'), shortcut: '⌘O', action: handleOpenFile },
+    { id: 'save', label: _t('palette.save'), category: _t('palette.file'), shortcut: '⌘S', action: handleSaveAs },
+    { id: 'save-as', label: _t('palette.save_as'), category: _t('palette.file'), shortcut: '⌘⇧S', action: handleSaveAs },
+    { id: 'export-pdf', label: _t('palette.export_pdf'), category: _t('palette.export'), shortcut: '⌘⇧P', action: handleExportPdf },
+    { id: 'copy-rtf', label: _t('palette.copy_rtf'), category: _t('palette.export'), shortcut: '⌘⇧C', action: handleCopyRendered },
+    { id: 'undo', label: _t('palette.undo'), category: _t('palette.edit'), shortcut: '⌘Z', action: handleUndo },
+    { id: 'redo', label: _t('palette.redo'), category: _t('palette.edit'), shortcut: '⌘⇧Z', action: handleRedo },
+    { id: 'font-inc', label: _t('palette.font_inc'), category: _t('palette.font'), action: handleIncreaseFontSize },
+    { id: 'font-dec', label: _t('palette.font_dec'), category: _t('palette.font'), action: handleDecreaseFontSize },
+    { id: 'font-reset', label: _t('palette.font_reset'), category: _t('palette.font'), action: handleResetFont },
+    { id: 'line-inc', label: _t('palette.line_inc'), category: _t('palette.font'), action: handleIncreaseLineHeight },
+    { id: 'line-dec', label: _t('palette.line_dec'), category: _t('palette.font'), action: handleDecreaseLineHeight },
+    { id: 'settings', label: _t('palette.settings'), category: _t('palette.app'), action: handleOpenSettings },
   ], [handleNewFile, handleOpenFile, handleSaveAs, handleExportPdf, handleCopyRendered, handleUndo, handleRedo, handleIncreaseFontSize, handleDecreaseFontSize, handleResetFont, handleIncreaseLineHeight, handleDecreaseLineHeight, handleOpenSettings]);
 
   // Push current markdown to history stack (debounced)
@@ -672,6 +759,26 @@ function App() {
     }, 200);
   }, [pushHistory]);
 
+  // Image paste — insert as base64 markdown
+  const handleImagePaste = useCallback((dataUrl: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const alt = 'pasted-image';
+    const md = `![${alt}](${dataUrl})`;
+    const newValue = markdown.slice(0, start) + md + markdown.slice(end);
+    setMarkdown(newValue);
+    setPreviewMarkdown(newValue);
+    setIsModified(true);
+    showToast(_t('app.toast.image_pasted'));
+    requestAnimationFrame(() => {
+      const cursor = start + md.length;
+      editor.selectionStart = editor.selectionEnd = cursor;
+      editor.focus();
+    });
+  }, [markdown, showToast]);
+
   // Tauri native menu event listener
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -691,10 +798,10 @@ function App() {
             case 'toggle_toc': setShowToc(p => !p); break;
             case 'toggle_focus': setIsFocusMode(p => !p); break;
             case 'close_window': getCurrentWindow().close(); break;
-            case 'about': showToast('MD MA v0.1.0 — a premium Markdown editor'); break;
+            case 'about': showToast(_t('app.about')); break;
             case 'zoom': getCurrentWindow().toggleMaximize(); break;
-            case 'hide_others': showToast('Hide Others'); break;
-            case 'show_all': showToast('Show All'); break;
+            case 'hide_others': showToast(_t('app.toast.hide_others')); break;
+            case 'show_all': showToast(_t('app.toast.show_all')); break;
           }
         });
       } catch {
@@ -778,7 +885,7 @@ function App() {
         {/* Focus mode exit button */}
         {isFocusMode && (
           <button className="focus-exit-btn" onClick={() => setIsFocusMode(false)}>
-            Exit Focus
+            {_t('focus.exit')}
           </button>
         )}
 
@@ -795,6 +902,7 @@ function App() {
               value={markdown}
               onChange={handleChange}
               onScroll={onEditorScroll}
+              onImagePaste={handleImagePaste}
             />
           </div>
         )}
@@ -811,17 +919,22 @@ function App() {
         )}
 
         {viewMode === 'split' && (
-          <>
-            <div className="editor-pane flex-1 overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+          <div ref={splitContainerRef} className="flex flex-1 overflow-hidden">
+            <div className="editor-pane overflow-hidden" style={{ flex: `0 0 ${splitRatio * 100}%`, background: 'var(--bg-secondary)' }}>
               <CodeEditor
                 ref={editorRef}
                 value={markdown}
                 onChange={handleChange}
                 onScroll={onEditorScroll}
+                onImagePaste={handleImagePaste}
               />
             </div>
-            <div className="split-divider" />
-            <div className="preview-pane flex-1 overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
+            <div
+              className="split-divider"
+              onMouseDown={handleSplitMouseDown}
+              style={{ cursor: 'col-resize', width: 6, flexShrink: 0, background: 'var(--border)', position: 'relative' }}
+            />
+            <div className="preview-pane overflow-hidden" style={{ flex: `0 0 ${(1 - splitRatio) * 100}%`, background: 'var(--bg-primary)' }}>
               <EditablePreview
                 ref={previewRef}
                 markdown={previewMarkdown}
@@ -829,7 +942,7 @@ function App() {
                 onScroll={onPreviewScroll}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -846,7 +959,7 @@ function App() {
         <div className="drag-overlay">
           <div className="drag-overlay-content">
             <div style={{ fontSize: 40, marginBottom: 8 }}>📄</div>
-            <div>Drop your .md or .txt file here</div>
+            <div>{_t('drag.drop_hint')}</div>
           </div>
         </div>
       )}
@@ -871,7 +984,7 @@ function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Custom Themes</h2>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{_t('theme.title')}</h2>
               <button
                 className="toolbar-btn"
                 onClick={() => setShowThemeDialog(false)}
@@ -884,7 +997,7 @@ function App() {
             {/* Existing custom themes */}
             <div className="mb-4 space-y-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
               {Object.keys(customThemes).length === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No custom themes yet.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{_t('theme.no_themes')}</p>
               )}
               {Object.entries(customThemes).map(([name]) => (
                 <div key={name} className="flex items-center justify-between" style={{ padding: '6px 8px', borderRadius: 6, background: 'var(--bg-secondary)' }}>
@@ -900,7 +1013,7 @@ function App() {
                     onClick={() => handleDeleteCustomTheme(name)}
                     style={{ padding: '2px 8px', fontSize: 12, color: 'var(--callout-caution-border, #ef4444)' }}
                   >
-                    Delete
+                    {_t('theme.delete')}
                   </button>
                 </div>
               ))}
@@ -910,7 +1023,7 @@ function App() {
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <input
                 className="w-full mb-2"
-                placeholder="Theme name (e.g. Monokai)"
+                placeholder={_t('theme.name_placeholder')}
                 value={themeEditorName}
                 onChange={(e) => setThemeEditorName(e.target.value)}
                 style={{
@@ -928,12 +1041,7 @@ function App() {
               <textarea
                 className="w-full mb-3 font-mono"
                 rows={6}
-                placeholder='{
-  "--bg-primary": "#1e1e1e",
-  "--bg-secondary": "#252526",
-  "--text-primary": "#d4d4d4",
-  "--accent": "#569cd6"
-}'
+                placeholder={_t('theme.json_placeholder')}
                 value={themeEditorJson}
                 onChange={(e) => setThemeEditorJson(e.target.value)}
                 style={{
@@ -951,7 +1059,7 @@ function App() {
                 }}
               />
               <button className="toolbar-btn" onClick={handleSaveCustomTheme} style={{ background: 'var(--accent)', color: 'white', border: 'none' }}>
-                Save Theme
+                {_t('theme.save')}
               </button>
             </div>
           </div>
@@ -971,193 +1079,44 @@ function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
-              Unsaved Changes
+              {_t('app.unsaved.title')}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
-              You have unsaved changes. What would you like to do?
+              {_t('app.unsaved.body')}
             </p>
             <div className="flex gap-2 justify-end">
               <button className="toolbar-btn" onClick={handleConfirmCancel}>
-                Cancel
+                {_t('app.unsaved.cancel')}
               </button>
               <button className="toolbar-btn" onClick={handleConfirmDiscard} style={{ color: '#ef4444', borderColor: '#ef4444' }}>
-                Discard
+                {_t('app.unsaved.discard')}
               </button>
               <button className="toolbar-btn" onClick={handleConfirmSave} style={{ background: 'var(--accent)', color: 'white', border: 'none' }}>
-                Save
+                {_t('app.unsaved.save')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Settings panel (gear icon) — floating dropdown, no backdrop */}
       {showSettingsPanel && (
-        <div
-          ref={settingsRef}
-          className="settings-dropdown"
-          style={{
-            position: 'fixed',
-            top: 56,
-            right: 12,
-            width: 340,
-            maxHeight: 'calc(100vh - 72px)',
-            overflowY: 'auto',
-            zIndex: 1000,
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: 20,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Settings</h2>
-            <button className="toolbar-btn" onClick={handleCloseSettings} style={{ padding: '4px 8px' }}>✕</button>
-          </div>
-
-            {/* Theme section */}
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Theme</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {(['system', 'snow', 'githubDark', 'nord', 'tokyoNight', 'solarizedLight', 'solarizedDark', 'ivory', 'navy', 'midnight', 'slate', 'ocean', 'storm', 'twilight', 'onyx', 'sepia'] as const).map((t) => {
-                  const effective = t === 'system' ? undefined : THEMES[t];
-                  const accent = effective?.['--accent'] ?? '#60a5fa';
-                  const bg = effective?.['--bg-primary'] ?? '#0f172a';
-                  const label = t.charAt(0).toUpperCase() + t.slice(1);
-                  const isActive = theme === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => { setTheme(t); }}
-                      title={label}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 10,
-                        border: isActive ? `2px solid var(--accent)` : `2px solid var(--border)`,
-                        background: bg,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isActive ? '0 0 0 2px var(--accent-bg)' : 'none',
-                      }}
-                    >
-                      <span style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        background: accent,
-                        display: 'block',
-                      }} />
-                      {t === 'system' && (
-                        <span style={{
-                          position: 'absolute',
-                          bottom: -2,
-                          right: -2,
-                          fontSize: 10,
-                          background: 'var(--bg-primary)',
-                          color: 'var(--text-muted)',
-                          borderRadius: 4,
-                          padding: '0 3px',
-                          border: '1px solid var(--border)',
-                          lineHeight: '14px',
-                        }}>A</span>
-                      )}
-                    </button>
-                  );
-                })}
-                {Object.keys(customThemes).map((name) => {
-                  const vars = customThemes[name];
-                  const accent = vars['--accent'] ?? '#60a5fa';
-                  const bg = vars['--bg-primary'] ?? '#0f172a';
-                  const isActive = theme === name;
-                  return (
-                    <button
-                      key={name}
-                      onClick={() => { setTheme(name); }}
-                      title={name}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 10,
-                        border: isActive ? `2px solid var(--accent)` : `2px solid var(--border)`,
-                        background: bg,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isActive ? '0 0 0 2px var(--accent-bg)' : 'none',
-                      }}
-                    >
-                      <span style={{ width: 20, height: 20, borderRadius: '50%', background: accent, display: 'block' }} />
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                className="toolbar-btn"
-                onClick={() => { handleOpenThemeDialog(); handleCloseSettings(); }}
-                style={{ marginTop: 8, fontSize: 12 }}
-              >
-                Custom themes…
-              </button>
-            </div>
-
-            {/* Font section */}
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Font</h3>
-              <div className="space-y-2">
-                {FONT_SETS.map((fs) => (
-                  <button
-                    key={fs.label}
-                    className="w-full text-left"
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: fontSet.label === fs.label ? 'var(--accent)' : 'var(--bg-secondary)',
-                      color: fontSet.label === fs.label ? 'white' : 'var(--text-primary)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      transition: 'all 0.15s ease',
-                    }}
-                    onClick={() => { setFontSet(fs); showToast(`Font: ${fs.label}`); }}
-                  >
-                    <span style={{ fontWeight: 600 }}>{fs.label}</span>
-                    <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 8, fontFamily: fs.body }}>{fs.body.split(',')[0].trim()}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Focus mode */}
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Reading density</h3>
-              <div className="flex flex-wrap gap-2">
-                <button className="toolbar-btn" onClick={handleDecreaseFontSize}>A-</button>
-                <button className="toolbar-btn" onClick={handleIncreaseFontSize}>A+</button>
-                <button className="toolbar-btn" onClick={handleDecreaseLineHeight}>Tight</button>
-                <button className="toolbar-btn" onClick={handleIncreaseLineHeight}>Roomy</button>
-                <button className="toolbar-btn" onClick={handleResetFont}>Reset</button>
-              </div>
-            </div>
-
-            <div>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Display</h3>
-              <button
-                className="toolbar-btn"
-                onClick={() => { setIsFocusMode(p => !p); handleCloseSettings(); }}
-                style={{ background: isFocusMode ? 'var(--accent-bg)' : 'transparent', color: isFocusMode ? 'var(--accent)' : 'var(--text-secondary)', borderColor: isFocusMode ? 'var(--accent)' : 'var(--border)' }}
-              >
-                {isFocusMode ? '✓ ' : ''}Focus mode
-              </button>
-            </div>
-        </div>
+        <SettingsDialog
+          theme={theme}
+          setTheme={setTheme}
+          customThemes={customThemes}
+          fontSet={fontSet}
+          setFontSet={setFontSet}
+          isFocusMode={isFocusMode}
+          setIsFocusMode={setIsFocusMode}
+          onClose={handleCloseSettings}
+          onOpenCustomThemes={handleOpenThemeDialog}
+          showToast={showToast}
+          onDecreaseFontSize={handleDecreaseFontSize}
+          onIncreaseFontSize={handleIncreaseFontSize}
+          onDecreaseLineHeight={handleDecreaseLineHeight}
+          onIncreaseLineHeight={handleIncreaseLineHeight}
+          onResetFont={handleResetFont}
+        />
       )}
 
       {/* Font dialog */}
@@ -1173,7 +1132,7 @@ function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Font Sets</h2>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{_t('font_sets.title')}</h2>
               <button
                 className="toolbar-btn"
                 onClick={() => setShowFontDialog(false)}
@@ -1198,10 +1157,10 @@ function App() {
                     transition: 'all 0.15s ease',
                     fontFamily: fs.body,
                   }}
-                  onClick={() => { setFontSet(fs); setShowFontDialog(false); showToast(`Font: ${fs.label}`); }}
+                  onClick={() => { setFontSet(fs); setShowFontDialog(false); showToast(`${_t('app.font')}: ${fs.label}`); }}
                 >
                   <div style={{ fontWeight: 600, marginBottom: 2 }}>{fs.label}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>Aa Bb Cc — The quick brown fox jumps over the lazy dog.</div>
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>{_t('font_sets.sample')}</div>
                 </button>
               ))}
             </div>

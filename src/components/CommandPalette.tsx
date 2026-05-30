@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useT } from '@/i18n';
 
 interface Command {
   id: string;
@@ -14,6 +15,7 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ commands, onClose }: CommandPaletteProps) {
+  const _t = useT();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +66,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center"
+      className="fixed inset-0 z-50 flex items-start justify-center modal-overlay"
       style={{ background: 'rgba(0,0,0,0.4)', paddingTop: '12vh' }}
       onClick={handleOverlayClick}
     >
@@ -80,7 +82,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search commands..."
+            placeholder={_t('palette.placeholder')}
             value={query}
             onChange={e => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyDown}

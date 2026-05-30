@@ -81,6 +81,13 @@ All custom items relayed to frontend via `handle.emit("menu-event", id)`. Built-
 - **10 themes** — Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight, Onyx, Sepia. F5 cycles built-ins.
 - **Copy button** on code blocks — appears on hover over `<pre>` blocks in the preview.
 - **Animated link underlines** — CSS-only slide-in underline on hover.
+- **Command palette** — `CommandPalette.tsx`, triggered via Cmd+K. Searches/filters commands with keyboard navigation.
+- **Resizable split** — draggable divider (col-resize) in split mode, persists ratio to localStorage.
+- **Image paste/drop** — paste images from clipboard (Cmd+V) or drag-drop image files; stored as base64 Data URL in markdown.
+- **Smooth transitions** — panel entrance animations, overlay fades, focus mode transitions.
+- **Preview debounce** — `previewMarkdown` state updated 200ms after last keystroke; ReactMarkdown not re-rendered on every char.
+- **RAF scroll throttle** — scroll sync handlers throttled via `requestAnimationFrame`, one sync per frame.
+- **Timeout sync lock** — replaces toggle mutex; 50ms lock prevents feedback loop between editor/preview scroll events.
 
 ## Notable quirks
 

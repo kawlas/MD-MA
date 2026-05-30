@@ -5,9 +5,10 @@ interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
+  onImagePaste?: (dataUrl: string) => void;
 }
 
-const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, onChange, onScroll }, ref) => {
+const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, onChange, onScroll, onImagePaste }, ref) => {
   const [lineCount, setLineCount] = useState(1);
   const gutterRef = useRef<HTMLDivElement>(null);
   const syncScrollRef = useRef(false);
@@ -116,6 +117,24 @@ const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, on
     }
   }, [value, onChange]);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          onImagePaste?.(ev.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+  }, [onImagePaste]);
+
   const handleTextareaScroll = useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
     if (gutterRef.current) {
       gutterRef.current.scrollTop = e.currentTarget.scrollTop;
@@ -157,9 +176,10 @@ const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, on
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onScroll={handleTextareaScroll}
         placeholder="Start writing Markdown here... or drag & drop a .md / .txt file"
-        spellCheck={false}
+        spellCheck={true}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"

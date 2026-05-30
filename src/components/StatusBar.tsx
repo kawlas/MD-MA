@@ -1,5 +1,6 @@
 import { getStats, getFileFormat } from '@/types';
 import { useMemo } from 'react';
+import { useT } from '@/i18n';
 
 interface StatusBarProps {
   markdown: string;
@@ -7,6 +8,7 @@ interface StatusBarProps {
 }
 
 export default function StatusBar({ markdown, fileName }: StatusBarProps) {
+  const _t = useT();
   const stats = useMemo(() => getStats(markdown), [markdown]);
   const format = getFileFormat(fileName) || 'MD';
 
@@ -27,9 +29,9 @@ export default function StatusBar({ markdown, fileName }: StatusBarProps) {
       }}
     >
       <div className="flex items-center gap-4">
-        <span>{stats.words} words</span>
-        <span>{stats.lines} lines</span>
-        <span>{stats.characters} chars</span>
+        <span>{stats.words} {_t('status.words')}</span>
+        <span>{stats.lines} {_t('status.lines')}</span>
+        <span>{stats.characters} {_t('status.chars')}</span>
       </div>
       <div className="flex items-center gap-4">
         <span>{format}</span>

@@ -412,6 +412,19 @@ export function slugify(text: string): string {
     .replace(/-+/g, '-');
 }
 
+export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): T & { cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const debounced = (...args: Parameters<T>) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+  debounced.cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+  };
+  return debounced as T & { cancel: () => void };
+}
+
 export function extractToc(markdown: string): TocItem[] {
   const headings: TocItem[] = [];
   const lines = markdown.split('\n');
@@ -466,9 +479,11 @@ export interface FontSet {
 export const FONT_SETS: FontSet[] = [
   { label: 'System', body: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.72 },
   { label: 'Inter + JetBrains', body: `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`, code: `'JetBrains Mono', 'SF Mono', 'Fira Code', monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
-  { label: 'SF Pro + SF Mono', body: `'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif`, code: `'SF Mono', 'JetBrains Mono', monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.7 },
-  { label: 'Literata Reader', body: `'Literata', Georgia, 'Iowan Old Style', serif`, code: `'JetBrains Mono', 'SF Mono', monospace`, bodySize: 17, codeSize: 13.5, lineHeight: 1.82 },
-  { label: 'Atkinson Accessible', body: `'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16.5, codeSize: 14, lineHeight: 1.78 },
+  { label: 'New York', body: `'New York', 'Iowan Old Style', 'Georgia', 'Times New Roman', serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 17, codeSize: 13.5, lineHeight: 1.8 },
+  { label: 'SF Rounded', body: `'SF Pro Rounded', 'Rounded Mplus 1c', system-ui, sans-serif`, code: `'SF Mono', 'JetBrains Mono', monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.7 },
+  { label: 'Helvetica Neue', body: `'Helvetica Neue', 'Helvetica', 'Arial', sans-serif`, code: `'SF Mono', Menlo, monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
+  { label: 'Mono', body: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, code: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, bodySize: 15, codeSize: 14, lineHeight: 1.65 },
+  { label: 'Atkinson', body: `'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16.5, codeSize: 14, lineHeight: 1.78 },
   { label: 'IBM Plex', body: `'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16, codeSize: 13.5, lineHeight: 1.72 },
 ];
 
@@ -728,6 +743,17 @@ export function formatInsertion(syntax: string, val: string, start: number, end:
 export function getFileFormat(fileName: string | null | undefined): 'MD' | 'TXT' | null {
   if (!fileName) return null;
   return fileName.toLowerCase().endsWith('.txt') ? 'TXT' : 'MD';
+}
+
+export type DropFileType = 'image' | 'text' | null;
+
+export function getDropFileType(fileName: string, mimeType: string): DropFileType {
+  const ext = '.' + fileName.split('.').pop()?.toLowerCase();
+  const imgExts = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp'];
+  if (imgExts.includes(ext) || mimeType.startsWith('image/')) return 'image';
+  const textExts = ['.md', '.txt', '.markdown', '.mdown', '.html', '.json', '.csv', '.xml', '.yaml', '.yml', '.toml', '.env'];
+  if (textExts.includes(ext) || mimeType.startsWith('text/') || mimeType === 'application/json') return 'text';
+  return null;
 }
 
 export function stripMarkdown(md: string): string {

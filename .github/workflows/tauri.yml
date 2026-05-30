@@ -1,0 +1,51 @@
+name: Tauri Build
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri binary (ad-hoc signed)
+        run: npm run tauri build
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+
+      - name: Notarize DMG
+        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          # Submit for notarization
+          xcrun notarytool submit \
+            src-tauri/target/release/bundle/dmg/*.dmg \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --password "${{ secrets.APPLE_PASSWORD }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --wait
+
+          # Staple the notarization ticket to the DMG
+          xcrun stapler staple src-tauri/target/release/bundle/dmg/*.dmg
+        shell: bash
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: MD-MA-dmg
+          path: src-tauri/target/release/bundle/dmg/*.dmg

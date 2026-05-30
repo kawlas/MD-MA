@@ -142,3 +142,79 @@ Wszystkie zmiany wg iterracji.
    - Wszystkie eventy relayowane do frontendu przez `menu-event`
 
 **Build:** Ad-hoc signed .dmg → ~/Desktop
+
+---
+
+## Iteracja 7 — Scroll sync v2 + localStorage debounce + Drag-drop extend + Preferences dialog + i18n + CI/CD
+
+**Co zrobiono:**
+
+1. **Scroll sync v2 — origin-tracking flags**
+   - Usunięto timestamp lock (50ms) → `editorScrollSuppressed.current` / `previewScrollSuppressed.current`
+   - Flags ustawiane przed programowym `scrollTop`, sprawdzane na wejściu do skip echo events
+   - Block lookup używa `previewBlocks` (ten sam source co rendered DOM)
+   - `useEffect` na `previewMarkdown` re-sync po 200ms debounce window
+   - Całkowicie eliminuje feedback loop (WebKit fire scroll event na `scrollTop` assignment)
+
+2. **localStorage debounce (500ms)**
+   - Czysta funkcja `debounce<T extends (...args: any[]) => void>(fn: T, delay: number): DebouncedFn<T>` w `types.ts`
+   - 3 testy Vitest dla debounce
+
+3. **Drag & drop extend**
+   - `getDropFileType(fileName, mimeType) → 'image' | 'text' | null` w `types.ts`
+   - Akceptowane rozszerzenia: .md, .txt, .markdown, .mdown, .html, .json, .csv, .xml, .yaml, .yml, .toml, .env
+   - 9 testów Vitest
+
+4. **Preferences dialog (SettingsDialog.tsx)**
+   - Wyciągnięty z floating dropdown jako centered modal
+   - Sekcje: Theme (swatches), Font, Density, Display, Language
+   - Language switcher z integracją i18n
+   - Focus mode toggle
+   - Zamykanie ESC + backdrop click
+
+5. **i18n (Polish + English)**
+   - `src/i18n.ts`: `LocaleContext`, `LocaleProvider`, `useT()`, `useLocale()`, `t()`
+   - Automatyczne wykrywanie z `navigator.language`
+   - 85+ kluczy tłumaczeń EN/PL
+   - 5 testów Vitest
+
+6. **CI/CD GitHub Actions**
+   - `.github/workflows/tauri.yml`
+   - Trigger na tagi `v*`
+   - macOS build, ad-hoc signing, upload .dmg jako artifact
+
+**Testy:** 80 (63 + 3 debounce + 9 getDropFileType + 5 i18n)
+
+**Build:** 637 kB single HTML file, typecheck/lint clean (1 pre-existing warning)
+
+---
+
+## Iteracja 8 — Final polish + DMG rebuild
+
+**Co zrobiono:**
+- CSS overhaul: modularna skala headingów (1.25×), animated link underlines (gradient slide-in), glassmorphism code copy button, pill badge języka kodu, thinner scrollbar (6px), refined tables/blockquotes/code blocks
+- Full-width layout: usunięto `max-width: 800px` z preview, padding edytora 24px
+- Font sets: 8 kompletnych (System, Inter+JetBrains, New York, SF Rounded, Helvetica Neue, Mono, Atkinson, IBM Plex)
+- Themes: 10 premium + 6 community (Nord, Tokyo Night, Solarized, GitHub Dark, Dracula, Gruvbox)
+- Smooth transitions: panelIn, overlayIn, toastIn/toastOut keyframes
+- Responsive toolbar: breakpoint 900px, 640px, 480px; .hide-narrow przy ≤480px
+
+**Build:** 648 kB single HTML, 3.3 MB DMG ad-hoc signed
+
+---
+
+## Goal
+
+Build a premium Markdown editor as a standalone macOS app with block-style editable preview, premium UI, and smooth editing experience.
+
+---
+
+## Current State
+
+**Ready for release.** All features implemented, 80 tests passing, build stable.
+
+### Status Overview
+- ✅ Testy: 80/80 przechodzą
+- ✅ Typecheck: czysty
+- ✅ Lint: czysty (1 pre-existing warning)
+- ✅ Build: 648 kB single HTML, 3.3 MB DMG ad-hoc signed

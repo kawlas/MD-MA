@@ -14,6 +14,8 @@ import {
   formatInsertion,
   getFileFormat,
   stripMarkdown,
+  debounce,
+  getDropFileType,
   THEMES,
   FONT_SETS,
 } from "./types";
@@ -390,9 +392,11 @@ describe("visual presets", () => {
     expect(FONT_SETS.map((font) => font.label)).toEqual([
       "System",
       "Inter + JetBrains",
-      "SF Pro + SF Mono",
-      "Literata Reader",
-      "Atkinson Accessible",
+      "New York",
+      "SF Rounded",
+      "Helvetica Neue",
+      "Mono",
+      "Atkinson",
       "IBM Plex",
     ]);
   });
@@ -405,5 +409,79 @@ describe("visual presets", () => {
       "solarizedLight",
       "solarizedDark",
     ]));
+  });
+});
+
+describe("debounce", () => {
+  it("delays execution by the given ms", async () => {
+    let count = 0;
+    const fn = debounce(() => { count++; }, 50);
+    fn();
+    expect(count).toBe(0);
+    await new Promise(r => setTimeout(r, 60));
+    expect(count).toBe(1);
+  });
+
+  it("cancels pending execution on cancel()", async () => {
+    let count = 0;
+    const fn = debounce(() => { count++; }, 50);
+    fn();
+    fn.cancel();
+    await new Promise(r => setTimeout(r, 60));
+    expect(count).toBe(0);
+  });
+
+  it("resets timer on each call (only last fires)", async () => {
+    let count = 0;
+    const fn = debounce(() => { count++; }, 50);
+    fn();
+    await new Promise(r => setTimeout(r, 30));
+    fn();
+    await new Promise(r => setTimeout(r, 30));
+    fn();
+    await new Promise(r => setTimeout(r, 60));
+    expect(count).toBe(1);
+  });
+});
+
+describe("getDropFileType", () => {
+  it("returns 'image' for image files by extension", () => {
+    expect(getDropFileType("photo.png", "image/png")).toBe("image");
+    expect(getDropFileType("photo.jpg", "image/jpeg")).toBe("image");
+    expect(getDropFileType("photo.svg", "image/svg+xml")).toBe("image");
+  });
+
+  it("returns 'image' for image files by MIME type", () => {
+    expect(getDropFileType("unknown.bin", "image/webp")).toBe("image");
+  });
+
+  it("returns 'text' for .md files", () => {
+    expect(getDropFileType("readme.md", "text/markdown")).toBe("text");
+  });
+
+  it("returns 'text' for .txt files", () => {
+    expect(getDropFileType("notes.txt", "text/plain")).toBe("text");
+  });
+
+  it("returns 'text' for .html files", () => {
+    expect(getDropFileType("page.html", "text/html")).toBe("text");
+  });
+
+  it("returns 'text' for .json files", () => {
+    expect(getDropFileType("data.json", "application/json")).toBe("text");
+  });
+
+  it("returns 'text' for .csv files", () => {
+    expect(getDropFileType("data.csv", "text/csv")).toBe("text");
+  });
+
+  it("returns 'text' for .yml and .xml files", () => {
+    expect(getDropFileType("config.yml", "text/yaml")).toBe("text");
+    expect(getDropFileType("config.xml", "application/xml")).toBe("text");
+  });
+
+  it("returns null for unsupported files", () => {
+    expect(getDropFileType("archive.zip", "application/zip")).toBeNull();
+    expect(getDropFileType("doc.pdf", "application/pdf")).toBeNull();
   });
 });
