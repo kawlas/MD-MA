@@ -334,12 +334,16 @@ function App() {
       }
       if (e.key === 'F5') {
         e.preventDefault();
-        setTheme(t => t === 'system' ? 'sepia' : t === 'sepia' ? 'nord' : t === 'nord' ? 'solarized' : 'system');
+        setTheme(prev => {
+          const builtin = ['system','snow','ivory','navy','midnight','slate','ocean','storm','twilight','onyx','sepia'];
+          const idx = builtin.indexOf(prev);
+          return builtin[(idx + 1) % builtin.length];
+        });
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleDownload, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf, setTheme]);
+  }, [handleDownload, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf]);
 
   return (
     <div

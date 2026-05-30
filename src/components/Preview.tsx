@@ -4,14 +4,10 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { slugify } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function remarkCallouts() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function walk(node: any) {
       if (node.children) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const child of node.children) {
           walk(child);
         }
@@ -60,9 +56,7 @@ const calloutConfig: Record<string, { icon: string; label: string }> = {
   caution: { icon: '🚫', label: 'Caution' },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function headingComponent(Tag: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ({ children, ...props }: any) => {
     const text = getTextContent(children);
     const id = slugify(text);
@@ -76,7 +70,6 @@ interface PreviewProps {
 }
 
 const Preview = forwardRef<HTMLDivElement, PreviewProps>(({ markdown, onScroll }, ref) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const components: Record<string, any> = {
     h1: headingComponent('h1'),
     h2: headingComponent('h2'),
@@ -84,7 +77,6 @@ const Preview = forwardRef<HTMLDivElement, PreviewProps>(({ markdown, onScroll }
     h4: headingComponent('h4'),
     h5: headingComponent('h5'),
     h6: headingComponent('h6'),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     blockquote: ({ children, className, ...props }: any) => {
       if (typeof className === 'string' && className.includes('callout')) {
         const typeMatch = className.match(/callout-(note|tip|important|warning|caution)/);

@@ -126,9 +126,16 @@ export default function Toolbar({
           title="Change theme"
         >
           <option value="system">🖥 System</option>
-          <option value="sepia">📜 Sepia</option>
-          <option value="nord">❄️ Nord</option>
-          <option value="solarized">☀️ Solarized</option>
+          <option value="snow">❄️ Snow</option>
+          <option value="ivory">📜 Ivory</option>
+          <option value="navy">⚓ Navy</option>
+          <option value="midnight">🌙 Midnight</option>
+          <option value="slate">🪨 Slate</option>
+          <option value="ocean">🌊 Ocean</option>
+          <option value="storm">⛈️ Storm</option>
+          <option value="twilight">🌆 Twilight</option>
+          <option value="onyx">🖤 Onyx</option>
+          <option value="sepia">📖 Sepia</option>
           {Object.keys(customThemes).map((name) => (
             <option key={name} value={name}>🎨 {name}</option>
           ))}
