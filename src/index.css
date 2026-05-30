@@ -609,6 +609,29 @@ body {
   box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 
+/* === Editable Preview Blocks === */
+.editable-block {
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  padding: 2px 4px;
+  margin: 0 -4px;
+}
+
+.editable-block:hover {
+  background: var(--accent-bg);
+}
+
+.editable-block:hover::after {
+  content: "✎";
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* === Focus Mode === */
 .focus-mode-active {
   padding: 0 !important;

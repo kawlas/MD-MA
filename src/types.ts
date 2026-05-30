@@ -323,6 +323,97 @@ export function getStats(markdown: string): TextStats {
   return { words, lines, characters, readTime };
 }
 
+export type BlockType = 'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' | 'paragraph' | 'code' | 'list' | 'blockquote' | 'table' | 'thematicBreak';
+
+export interface Block {
+  id: string;
+  type: BlockType;
+  content: string;
+}
+
+let blockIdCounter = 0;
+function nextBlockId(): string {
+  return `b${++blockIdCounter}`;
+}
+
+export function parseBlocks(markdown: string): Block[] {
+  const blocks: Block[] = [];
+  const lines = markdown.split('\n');
+  const current: string[] = [];
+  let inCodeBlock = false;
+
+  function makeBlock(content: string): Block {
+    const trimmed = content.trimStart();
+    const firstLine = trimmed.split('\n')[0];
+
+    if (inCodeBlock || trimmed.startsWith('```')) {
+      return { id: nextBlockId(), type: 'code', content };
+    }
+
+    const headingMatch = firstLine.match(/^(#{1,6})\s/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      return { id: nextBlockId(), type: `heading${level}` as BlockType, content };
+    }
+
+    if (firstLine.startsWith('|')) {
+      return { id: nextBlockId(), type: 'table', content };
+    }
+
+    if (firstLine.startsWith('>')) {
+      return { id: nextBlockId(), type: 'blockquote', content };
+    }
+
+    if (/^[-*+]\s/.test(firstLine) || /^\d+[.)]\s/.test(firstLine)) {
+      return { id: nextBlockId(), type: 'list', content };
+    }
+
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(firstLine.trim())) {
+      return { id: nextBlockId(), type: 'thematicBreak', content };
+    }
+
+    return { id: nextBlockId(), type: 'paragraph', content };
+  }
+
+  function flush() {
+    if (current.length === 0) return;
+    blocks.push(makeBlock(current.join('\n')));
+    current.length = 0;
+  }
+
+  for (const line of lines) {
+    if (line.trimStart().startsWith('```')) {
+      current.push(line);
+      if (inCodeBlock) {
+        inCodeBlock = false;
+        flush();
+      } else {
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      current.push(line);
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flush();
+      continue;
+    }
+
+    current.push(line);
+  }
+  flush();
+
+  return blocks;
+}
+
+export function serializeBlocks(blocks: Block[]): string {
+  return blocks.map(b => b.content).join('\n\n');
+}
+
 export const SAMPLE_MARKDOWN = `# Welcome to MD MA
 
 A beautiful Markdown editor and viewer — inspired by **ShowMeMyMD**.

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import Toolbar from '@/components/Toolbar';
 import CodeEditor from '@/components/CodeEditor';
-import Preview from '@/components/Preview';
+import EditablePreview from '@/components/EditablePreview';
 import TableOfContents from '@/components/TableOfContents';
 import StatusBar from '@/components/StatusBar';
 import {
@@ -409,9 +409,9 @@ function App() {
         )}
 
         {viewMode === 'preview' && (
-          <Preview
-            ref={previewRef}
+          <EditablePreview
             markdown={markdown}
+            onChange={handleChange}
             onScroll={handlePreviewScroll}
           />
         )}
@@ -428,9 +428,9 @@ function App() {
             </div>
             <div className="split-divider" />
             <div className="flex-1 overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
-              <Preview
-                ref={previewRef}
+              <EditablePreview
                 markdown={markdown}
+                onChange={handleChange}
                 onScroll={handlePreviewScroll}
               />
             </div>
