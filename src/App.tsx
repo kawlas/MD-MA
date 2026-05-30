@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Toolbar from '@/components/Toolbar';
 import CodeEditor from '@/components/CodeEditor';
-import EditablePreview from '@/components/EditablePreview';
+import Preview from '@/components/Preview';
 import TableOfContents from '@/components/TableOfContents';
 import StatusBar from '@/components/StatusBar';
 import CommandPalette from '@/components/CommandPalette';
@@ -909,10 +909,9 @@ function App() {
 
         {viewMode === 'preview' && (
           <div className="preview-pane flex-1 overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
-            <EditablePreview
+            <Preview
               ref={previewRef}
               markdown={previewMarkdown}
-              onChange={handleChange}
               onScroll={onPreviewScroll}
             />
           </div>
@@ -935,10 +934,9 @@ function App() {
               style={{ cursor: 'col-resize', width: 6, flexShrink: 0, background: 'var(--border)', position: 'relative' }}
             />
             <div className="preview-pane overflow-hidden" style={{ flex: `0 0 ${(1 - splitRatio) * 100}%`, background: 'var(--bg-primary)' }}>
-              <EditablePreview
+              <Preview
                 ref={previewRef}
                 markdown={previewMarkdown}
-                onChange={handleChange}
                 onScroll={onPreviewScroll}
               />
             </div>
