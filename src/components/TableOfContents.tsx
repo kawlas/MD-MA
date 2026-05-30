@@ -40,8 +40,8 @@ export default function TableOfContents({ markdown, activeId }: TableOfContentsP
     );
   }
 
-  const handleClick = (id: string) => {
-    const el = document.getElementById(id);
+  const handleClick = (line: number, id: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-source-start-line="${line}"]`) ?? document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -79,7 +79,7 @@ export default function TableOfContents({ markdown, activeId }: TableOfContentsP
           return (
             <button
               key={item.id}
-              onClick={() => handleClick(item.id)}
+              onClick={() => handleClick(item.line, item.id)}
               className={`toc-item ${isActive ? 'toc-item-active' : ''}`}
               style={{
                 display: 'block',

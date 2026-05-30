@@ -1,8 +1,8 @@
-import { forwardRef, useState, useCallback, useRef, useEffect } from "react";
+import { forwardRef, useState, useCallback, useRef, useEffect, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { slugify, parseBlocks, serializeBlocks, type Block } from "@/types";
+import { slugify, parseBlocks, replaceBlockContent, toggleTaskInBlock, type Block } from "@/types";
 import type { ReactNode } from "react";
 
 function getTextContent(children: ReactNode): string {
@@ -22,6 +22,26 @@ const calloutConfig: Record<string, { icon: string; label: string }> = {
   warning: { icon: "⚠️", label: "Warning" },
   caution: { icon: "🚫", label: "Caution" },
 };
+
+function CodeBlock({ children, className }: { children: ReactNode; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(getTextContent(children)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    });
+  }, [children]);
+
+  return (
+    <div className="code-block-wrapper" style={{ position: "relative" }}>
+      <button className="code-copy-btn" onClick={handleCopy} type="button">
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <pre className={className}>{children}</pre>
+    </div>
+  );
+}
 
 function headingComponent(Tag: string) {
   return ({ children, ...props }: any) => {
@@ -69,6 +89,7 @@ const mdComponents: Record<string, any> = {
   h4: headingComponent("h4"),
   h5: headingComponent("h5"),
   h6: headingComponent("h6"),
+  pre: ({ children, className }: any) => <CodeBlock className={className}>{children}</CodeBlock>,
   blockquote: ({ children, className, ...props }: any) => {
     if (typeof className === "string" && className.includes("callout")) {
       const typeMatch = className.match(/callout-(note|tip|important|warning|caution)/);
@@ -94,7 +115,7 @@ interface EditablePreviewProps {
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
-const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ markdown, onChange, onScroll }, ref) => {
+const EditablePreview = memo(forwardRef<HTMLDivElement, EditablePreviewProps>(({ markdown, onChange, onScroll }, ref) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,13 +134,23 @@ const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ mark
     setEditValue(block.content);
   }, []);
 
+  const handleBlockMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, block: Block) => {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const blockEl = e.currentTarget;
+    const taskIndex = Array.from(blockEl.querySelectorAll('input[type="checkbox"]')).indexOf(target);
+    onChange(toggleTaskInBlock(markdown, block.id, taskIndex));
+  }, [markdown, onChange]);
+
   const handleSave = useCallback(() => {
     if (editingId === null) return;
-    const updated = blocks.map((b) => (b.id === editingId ? { ...b, content: editValue } : b));
-    onChange(serializeBlocks(updated));
+    onChange(replaceBlockContent(markdown, editingId, editValue));
     setEditingId(null);
     setEditValue("");
-  }, [editingId, editValue, blocks, onChange]);
+  }, [editingId, editValue, markdown, onChange]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, block: Block) => {
@@ -144,6 +175,7 @@ const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ mark
         padding: "24px 32px",
         overflowY: "auto",
         height: "100%",
+        position: "relative",
         background: "var(--bg-preview, var(--bg-primary))",
       }}
       onScroll={onScroll}
@@ -158,7 +190,14 @@ const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ mark
 
         if (isEditing) {
           return (
-            <div key={block.id} style={{ margin: "0.5em 0" }}>
+            <div
+              className="editable-block-editor"
+              key={block.id}
+              data-block-id={block.id}
+              data-source-start-line={block.startLine}
+              data-source-end-line={block.endLine}
+              style={{ margin: "0.5em 0" }}
+            >
               <textarea
                 ref={textareaRef}
                 className="editor-textarea"
@@ -192,7 +231,16 @@ const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ mark
         return (
           <div
             key={block.id}
-            onClick={() => handleBlockClick(block)}
+            data-block-id={block.id}
+            data-source-start-line={block.startLine}
+            data-source-end-line={block.endLine}
+            onMouseDown={(e) => handleBlockMouseDown(e, block)}
+            onClick={(e) => {
+              const target = e.target;
+              if (target instanceof HTMLInputElement && target.type === "checkbox") return;
+              if (target instanceof HTMLElement && target.closest("a, button")) return;
+              handleBlockClick(block);
+            }}
             className="editable-block"
             style={{
               cursor: "pointer",
@@ -214,7 +262,7 @@ const EditablePreview = forwardRef<HTMLDivElement, EditablePreviewProps>(({ mark
       })}
     </div>
   );
-});
+}));
 
 EditablePreview.displayName = "EditablePreview";
 export default EditablePreview;

@@ -12,11 +12,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri": "cargo tauri",
+    "tauri:dev": "cargo tauri dev",
+    "tauri:build": "cargo tauri build"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
     "clsx": "2.1.1",
     "highlight.js": "^11.11.1",
     "react": "19.2.6",

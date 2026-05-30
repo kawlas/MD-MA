@@ -58,8 +58,21 @@ All read on mount and persisted via `useEffect`.
 
 - Rust project in `src-tauri/`. Run `npm run tauri build` to produce a `.dmg` in `src-tauri/target/release/bundle/dmg/`.
 - Tauri config in `src-tauri/tauri.conf.json` — sets window size (1200×800), app identifier, DMG target.
-- No custom Rust commands / IPC — pure WebView wrapper.
+- Ad-hoc code signing via `"signingIdentity": "-"` in `tauri.conf.json`.
+- No custom Rust commands / IPC — pure WebView wrapper (menu events relayed via `menu-event`).
 - `tauri dev` runs the Vite dev server and opens a native window.
+
+### macOS native menu bar (`src-tauri/src/lib.rs`)
+
+| Menu | Items |
+|---|---|
+| **MD MA** | About MD MA, Hide MD MA (`Cmd+H`), Hide Others (`Cmd+Alt+H`), Show All, Quit (`Cmd+Q`) |
+| **File** | New File (`Cmd+N`), Open File (`Cmd+O`), Save (`Cmd+S`), Save As (`Cmd+Shift+S`), Export PDF (`Cmd+Shift+P`), Copy as Rich Text (`Cmd+Shift+C`) |
+| **Edit** | Undo (`Cmd+Z`), Redo (`Cmd+Shift+Z`), Cut (`Cmd+X`), Copy (`Cmd+C`), Paste (`Cmd+V`), Select All (`Cmd+A`) |
+| **View** | Toggle Outline (`Cmd+Shift+T`), Toggle Focus Mode (`Cmd+Shift+F`) |
+| **Window** | Minimize (`Cmd+M`), Zoom, Close Window (`Cmd+W`) |
+
+All custom items relayed to frontend via `handle.emit("menu-event", id)`. Built-in items (Cut, Copy, Paste, Select All, Minimize, Quit) handled natively by Tauri.
 
 ## Key features added
 

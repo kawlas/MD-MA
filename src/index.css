@@ -41,9 +41,9 @@ body {
 .editor-textarea {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', 'Consolas', 'Monaco', monospace;
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: var(--font-code);
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-body);
   tab-size: 2;
   resize: none;
   outline: none;
@@ -61,14 +61,24 @@ body {
   background: var(--accent-bg);
 }
 
+/* === Default font vars (overridden by font sets) === */
+:root {
+  --font-body: -apple-system, 'SF Pro', 'Helvetica Neue', 'Noto Sans', sans-serif;
+  --font-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-size-body: 16px;
+  --font-size-code: 14px;
+  --line-height-body: 1.75;
+}
+
 /* === Markdown Preview Styles === */
 .md-preview {
-  font-family: -apple-system, 'SF Pro', 'Helvetica Neue', 'Noto Sans', sans-serif;
-  font-size: 16px;
-  line-height: 1.75;
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   color: var(--text-primary);
   word-wrap: break-word;
   font-feature-settings: 'kern' 1, 'liga' 1;
+  scroll-behavior: smooth;
 }
 
 .md-preview > *:first-child {
@@ -204,8 +214,8 @@ body {
 }
 
 .md-preview code {
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.875em;
+  font-family: var(--font-code);
+  font-size: calc(var(--font-size-body) * 0.875);
   background: var(--bg-secondary);
   padding: 0.2em 0.4em;
   border-radius: 4px;
@@ -254,7 +264,7 @@ body {
   color: rgba(255,255,255,0.35);
   background: rgba(255,255,255,0.04);
   border-radius: 0 12px 0 8px;
-  font-family: -apple-system, 'SF Pro', sans-serif;
+  font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
@@ -495,6 +505,57 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  user-select: none;
+  transition: border 0.3s ease;
+  z-index: 100;
+  position: relative;
+  flex-wrap: nowrap;
+}
+
+.toolbar-logo {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--accent);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.focus-exit-btn {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transition: all 0.15s ease;
+}
+
+.focus-exit-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* === Button styles === */
@@ -609,12 +670,23 @@ body {
   box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 
+.md-preview > .editable-block,
+.md-preview > .editable-block-editor,
+.md-preview > p {
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* === Editable Preview Blocks === */
 .editable-block {
   border-radius: 4px;
   transition: background 0.15s ease;
-  padding: 2px 4px;
-  margin: 0 -4px;
+  padding: 2px 8px;
+}
+
+.editable-block-editor {
+  padding: 2px 8px;
 }
 
 .editable-block:hover {
@@ -638,16 +710,184 @@ body {
 }
 
 .focus-mode-active .md-preview {
-  padding: 40px 48px !important;
+  padding: 56px 48px !important;
 }
 
 .focus-mode-active .editor-textarea {
-  padding: 40px 48px !important;
+  padding: 56px max(48px, calc((100vw - 980px) / 2)) !important;
+}
+
+.view-preview .md-preview {
+  padding-top: 40px !important;
+}
+
+.view-preview .md-preview > .editable-block,
+.view-preview .md-preview > .editable-block-editor {
+  max-width: 820px;
 }
 
 /* === Selection === */
 ::selection {
   background: var(--accent-bg);
+}
+
+/* === Line number gutter === */
+.editor-line-gutter {
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+  text-align: right;
+  padding-top: 24px;
+  padding-right: 8px;
+  font-family: var(--font-code);
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-body);
+  color: var(--text-muted);
+  opacity: 0.45;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+}
+
+.editor-line-gutter span {
+  display: block;
+  padding: 0 4px;
+  line-height: var(--line-height-body);
+}
+
+/* === Responsive toolbar === */
+@media (max-width: 900px) {
+  .toolbar-container {
+    gap: 4px;
+    padding: 0 8px;
+    min-height: 44px;
+  }
+  .toolbar-left,
+  .toolbar-center,
+  .toolbar-right {
+    min-width: 0;
+  }
+  .toolbar-left .toolbar-btn,
+  .toolbar-right .toolbar-btn {
+    padding: 4px 5px;
+  }
+  .toolbar-center .segmented-control .segmented-btn {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .toolbar-center .segmented-control .segmented-btn span {
+    display: none;
+  }
+  .toolbar-divider {
+    margin: 0 2px;
+  }
+  .toolbar-logo {
+    display: none;
+  }
+  .filename-display {
+    max-width: 72px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar-container {
+    gap: 3px;
+    padding: 0 6px;
+    min-height: 42px;
+  }
+  .toolbar-left .toolbar-btn,
+  .toolbar-right .toolbar-btn {
+    padding: 3px 3px;
+  }
+  .toolbar-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  .toolbar-divider {
+    margin: 0 1px;
+  }
+  .segmented-btn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  .filename-display,
+  .toolbar-left .toolbar-divider {
+    display: none;
+  }
+  .status-bar {
+    display: none !important;
+  }
+  .toc-sidebar {
+    position: fixed;
+    inset: 42px auto 0 0;
+    z-index: 500;
+    height: calc(100vh - 42px) !important;
+    box-shadow: 12px 0 30px rgba(0,0,0,0.18);
+  }
+  .app-main.view-split .preview-pane,
+  .app-main.view-split .split-divider {
+    display: none;
+  }
+  .md-preview {
+    padding: 20px !important;
+  }
+  .editor-textarea {
+    padding: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-container {
+    gap: 2px;
+    padding: 0 4px;
+    min-height: 40px;
+  }
+  .hide-narrow {
+    display: none !important;
+  }
+  .settings-dropdown {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    top: 48px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .toolbar-container {
+    gap: 1px;
+    min-height: 36px;
+  }
+  .toolbar-right .toolbar-btn {
+    padding: 2px 2px !important;
+  }
+  .toolbar-left .toolbar-btn {
+    padding: 2px 2px !important;
+  }
+}
+
+/* === Inline filename input === */
+.filename-input {
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100px;
+}
+
+.filename-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.filename-display {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.filename-display:hover {
+  color: var(--accent) !important;
 }
 
 /* === Print styles === */
