@@ -1,4 +1,4 @@
-# MD Editor — Agent Guide
+# MD MA — Agent Guide
 
 ## Stack
 
@@ -17,6 +17,8 @@ npm run test          # Vitest run (config: vitest.config.ts)
 npm run test:watch    # Vitest watch
 npm run tauri dev     # Tauri dev (native window + Vite)
 npm run tauri build   # Tauri release build → .dmg/.app
+npm run tauri:dev     # alias for tauri dev
+npm run tauri:build   # alias for tauri build
 ```
 
 ## Path alias

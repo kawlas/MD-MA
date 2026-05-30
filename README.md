@@ -1,4 +1,4 @@
-# MD Editor
+# MD MA
 
 A Markdown viewer and editor with live preview, multiple themes, and syntax highlighting.
 

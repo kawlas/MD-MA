@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MD Editor",
+  "productName": "MD MA",
   "version": "0.1.0",
   "identifier": "com.mdeditor.md-editor",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MD Editor",
+        "title": "MD MA",
         "width": 1200,
         "height": 800,
         "minWidth": 600,

@@ -231,7 +231,7 @@ export function getStats(markdown: string): TextStats {
   return { words, lines, characters, readTime };
 }
 
-export const SAMPLE_MARKDOWN = `# Welcome to MD Editor
+export const SAMPLE_MARKDOWN = `# Welcome to MD MA
 
 A beautiful Markdown editor and viewer — inspired by **ShowMeMyMD**.
 
