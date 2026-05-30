@@ -1,4 +1,4 @@
-import { forwardRef, ReactNode } from 'react';
+import { forwardRef, ReactNode, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -64,6 +64,47 @@ function headingComponent(Tag: string) {
   };
 }
 
+function CodeBlock({ children, className }: { children: ReactNode; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    const text = getTextContent(children);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }, [children]);
+  return (
+    <div className="code-block-wrapper" style={{ position: 'relative' }}>
+      <button
+        className="code-copy-btn"
+        onClick={handleCopy}
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 10,
+          padding: '4px 10px',
+          fontSize: 11,
+          fontWeight: 500,
+          borderRadius: 6,
+          border: 'none',
+          cursor: 'pointer',
+          opacity: 0,
+          transition: 'opacity 0.2s',
+          background: 'rgba(255,255,255,0.1)',
+          color: 'rgba(255,255,255,0.7)',
+          fontFamily: '-apple-system, "SF Pro", sans-serif',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = '#fff'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+      >
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+      <pre className={className}>{children}</pre>
+    </div>
+  );
+}
+
 interface PreviewProps {
   markdown: string;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
@@ -77,6 +118,7 @@ const Preview = forwardRef<HTMLDivElement, PreviewProps>(({ markdown, onScroll }
     h4: headingComponent('h4'),
     h5: headingComponent('h5'),
     h6: headingComponent('h6'),
+    pre: ({ children }: any) => <CodeBlock>{children}</CodeBlock>,
     blockquote: ({ children, className, ...props }: any) => {
       if (typeof className === 'string' && className.includes('callout')) {
         const typeMatch = className.match(/callout-(note|tip|important|warning|caution)/);

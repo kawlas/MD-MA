@@ -39,6 +39,7 @@ function App() {
       return {};
     }
   });
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const [themeEditorName, setThemeEditorName] = useState('');
   const [themeEditorJson, setThemeEditorJson] = useState('');
@@ -367,7 +368,7 @@ function App() {
         onChange={handleFileSelected}
       />
 
-      {/* Toolbar */}
+      {/* Toolbar (hidden in focus mode except toggle button) */}
       <Toolbar
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -384,10 +385,12 @@ function App() {
         isModified={isModified}
         customThemes={customThemes}
         onManageThemes={handleOpenThemeDialog}
+        isFocusMode={isFocusMode}
+        onToggleFocus={() => setIsFocusMode(p => !p)}
       />
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`flex flex-1 overflow-hidden ${isFocusMode ? 'focus-mode-active' : ''}`}>
         {/* TOC Sidebar */}
         {showToc && (
           <TableOfContents markdown={markdown} />
@@ -435,8 +438,8 @@ function App() {
         )}
       </div>
 
-      {/* Status bar */}
-      <StatusBar markdown={markdown} />
+      {/* Status bar (hidden in focus mode) */}
+      {!isFocusMode && <StatusBar markdown={markdown} />}
 
       {/* Drag overlay */}
       {isDragging && (
