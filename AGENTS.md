@@ -61,6 +61,14 @@ All read on mount and persisted via `useEffect`.
 - No custom Rust commands / IPC — pure WebView wrapper.
 - `tauri dev` runs the Vite dev server and opens a native window.
 
+## Key features added
+
+- **Editable preview** — `EditablePreview.tsx` renders markdown as clickable blocks; click any block to edit it inline (Notion-style). Fully separate from the raw code editor.
+- **Focus mode** — toggled via toolbar button; hides toolbar/statusbar, enlarges padding, clean writing environment.
+- **10 themes** — Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight, Onyx, Sepia. F5 cycles built-ins.
+- **Copy button** on code blocks — appears on hover over `<pre>` blocks in the preview.
+- **Animated link underlines** — CSS-only slide-in underline on hover.
+
 ## Notable quirks
 
 - `eslint.config.js` uses the flat config format (ESLint 9).
