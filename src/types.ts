@@ -416,7 +416,7 @@ export function serializeBlocks(blocks: Block[]): string {
 
 export const SAMPLE_MARKDOWN = `# Welcome to MD MA
 
-A beautiful Markdown editor and viewer — inspired by **ShowMeMyMD**.
+A beautiful Markdown editor and viewer.
 
 ## ✨ Features
 
