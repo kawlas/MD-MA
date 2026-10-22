@@ -548,3 +548,88 @@ describe("App: native file I/O document identity", () => {
     delete (window as unknown as Record<string, unknown>).__TAURI__;
   });
 });
+
+// ── New File clears both editor and preview buffers ─────────────
+
+describe("App: New File clears editor buffer", () => {
+  beforeEach(() => {
+    localStorageMock.store.set("md-editor-content", "# existing content");
+  });
+
+  it("doNewFile sets markdown and previewMarkdown to empty (not just preview)", async () => {
+    const { container, unmount } = render(<App />);
+    await waitFor(() => expect(container.querySelector(".app-main")).not.toBeNull());
+
+    // Content was loaded from localStorage on mount
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Trigger New File via Cmd+N
+    await act(async () => {
+      const newEvent = new KeyboardEvent("keydown", { key: "n", metaKey: true, bubbles: true });
+      window.dispatchEvent(newEvent);
+    });
+
+    // No dialog (content is non-empty → discard dialog appears)
+    // Click "Discard" to proceed
+    const dialog = container.querySelector(".fixed.inset-0.z-50");
+    if (dialog) {
+      const discardBtn = Array.from(dialog.querySelectorAll("button")).find(
+        (b) => b.textContent === "app.unsaved.discard",
+      );
+      await act(async () => {
+        fireEvent.click(discardBtn!);
+      });
+    }
+
+    // After New File, content should be empty — verify via localStorage
+    // (markdown state is empty, so the 500ms debounce persist writes "")
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+
+    // The persisted content should be empty string (both markdown and previewMarkdown cleared)
+    expect(localStorageMock.getItem("md-editor-content")).toBe("");
+
+    unmount();
+  });
+
+  it("doNewFile on document with content shows discard dialog, then clears on Discard", async () => {
+    const { container, unmount } = render(<App />);
+    await waitFor(() => expect(container.querySelector(".app-main")).not.toBeNull());
+
+    // Wait for initial state to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Document loaded from localStorage (SAMPLE_MARKDOWN) is non-empty → dialog appears
+    await act(async () => {
+      const newEvent = new KeyboardEvent("keydown", { key: "n", metaKey: true, bubbles: true });
+      window.dispatchEvent(newEvent);
+    });
+
+    // Discard dialog should appear
+    const dialog = await waitFor(() => container.querySelector(".fixed.inset-0.z-50"));
+    expect(dialog).not.toBeNull();
+
+    // Click Discard → doNewFile clears both markdown and previewMarkdown
+    const discardBtn = Array.from(dialog!.querySelectorAll("button")).find(
+      (b) => b.textContent === "app.unsaved.discard",
+    );
+    expect(discardBtn).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(discardBtn!);
+    });
+
+    // After Discard, persist (debounced 500ms) should write empty string
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+
+    expect(localStorageMock.getItem("md-editor-content")).toBe("");
+
+    unmount();
+  });
+});

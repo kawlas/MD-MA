@@ -361,6 +361,7 @@ function App() {
       void invoke("clear_current_doc").catch(() => {});
     }
     setNativeDocPath(null);
+    setMarkdown("");
     setPreviewMarkdown("");
     setFileName(null);
     setIsModified(false);
