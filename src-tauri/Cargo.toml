@@ -23,3 +23,8 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
+
+# Rust 1.96 / macOS 27 (LLVM 22) emits mis-aligned LINKEDIT in stripped
+# proc-macro dylibs (rust-lang/rust#157750); disable strip for build scripts.
+[profile.release.build-override]
+strip = "none"
