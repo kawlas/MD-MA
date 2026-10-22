@@ -25,6 +25,11 @@
       "csp": null
     }
   },
+  "plugins": {
+    "dialog": {
+      "allFileTypes": true
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "dmg",

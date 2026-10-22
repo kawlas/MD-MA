@@ -24,18 +24,21 @@ export const calloutConfig: Record<string, { icon: string; label: string }> = {
 export function CodeBlock({ children, className }: { children: ReactNode; className?: string }) {
   const _t = useT();
   const [copied, setCopied] = useState(false);
-  const handleCopy = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(getTextContent(children)).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    });
-  }, [children]);
+  const handleCopy = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(getTextContent(children)).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1400);
+      });
+    },
+    [children],
+  );
 
   return (
     <div className="code-block-wrapper" style={{ position: "relative" }}>
       <button className="code-copy-btn" onClick={handleCopy} type="button">
-        {copied ? _t('code.copied') : _t('code.copy')}
+        {copied ? _t("code.copied") : _t("code.copy")}
       </button>
       <pre className={className}>{children}</pre>
     </div>
@@ -46,7 +49,11 @@ export function headingComponent(Tag: string) {
   return ({ children, ...props }: any) => {
     const text = getTextContent(children);
     const id = slugify(text);
-    return <Tag id={id} {...props}>{children}</Tag>;
+    return (
+      <Tag id={id} {...props}>
+        {children}
+      </Tag>
+    );
   };
 }
 
@@ -54,32 +61,32 @@ export function PreviewImage({ src, alt }: { src?: string; alt?: string }) {
   const [zoomed, setZoomed] = useState(false);
   const toggleZoom = useCallback(() => {
     if (!src) return;
-    setZoomed(p => !p);
+    setZoomed((p) => !p);
   }, [src]);
   return (
     <>
       <img
         src={src}
-        alt={alt || ''}
+        alt={alt || ""}
         loading="lazy"
         onClick={toggleZoom}
         style={{
-          maxWidth: '100%',
-          cursor: src ? 'zoom-in' : 'default',
+          maxWidth: "100%",
+          cursor: src ? "zoom-in" : "default",
           borderRadius: 8,
-          transition: 'transform 0.2s',
+          transition: "transform 0.2s",
         }}
       />
       {zoomed && src && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.8)', cursor: 'zoom-out' }}
+          style={{ background: "rgba(0,0,0,0.8)", cursor: "zoom-out" }}
           onClick={toggleZoom}
         >
           <img
             src={src}
-            alt={alt || ''}
-            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
+            alt={alt || ""}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
           />
         </div>
       )}
@@ -142,6 +149,10 @@ export const mdComponents: Record<string, any> = {
         </div>
       );
     }
-    return <blockquote className={className} {...props}>{children}</blockquote>;
+    return (
+      <blockquote className={className} {...props}>
+        {children}
+      </blockquote>
+    );
   },
 };

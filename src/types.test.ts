@@ -13,10 +13,13 @@ import {
   getListContinuation,
   formatInsertion,
   getFileFormat,
+  isTxt,
   stripMarkdown,
   debounce,
   getDropFileType,
+  getEffectiveTheme,
   THEMES,
+  THEME_LIST,
   FONT_SETS,
 } from "./types";
 
@@ -337,6 +340,32 @@ describe("getFileFormat", () => {
   });
 });
 
+describe("isTxt", () => {
+  it("returns true for .txt files", () => {
+    expect(isTxt("notes.txt")).toBe(true);
+  });
+
+  it("returns true for uppercase .TXT", () => {
+    expect(isTxt("README.TXT")).toBe(true);
+  });
+
+  it("returns false for .md files", () => {
+    expect(isTxt("readme.md")).toBe(false);
+  });
+
+  it("returns false for .markdown files", () => {
+    expect(isTxt("readme.markdown")).toBe(false);
+  });
+
+  it("returns false for null fileName", () => {
+    expect(isTxt(null)).toBe(false);
+  });
+
+  it("returns false for undefined fileName", () => {
+    expect(isTxt(undefined)).toBe(false);
+  });
+});
+
 describe("stripMarkdown", () => {
   it("removes heading markers", () => {
     expect(stripMarkdown("# Heading 1\n## Heading 2")).toBe("Heading 1\nHeading 2");
@@ -398,48 +427,125 @@ describe("visual presets", () => {
       "Mono",
       "Atkinson",
       "IBM Plex",
+      "Literata",
+      "Source Serif 4",
+      "Lora",
+      "JetBrains Mono",
     ]);
   });
 
+  it("marks the new offline-bundled font presets", () => {
+    const embedded = FONT_SETS.filter((f) => f.bundled);
+    expect(embedded.map((f) => f.id)).toEqual(["atkinson", "literata", "sourceserif4", "lora", "jetbrains-mono"]);
+    expect(FONT_SETS.find((f) => f.id === "atkinson")?.display).toBe("Atkinson Hyperlegible");
+    const jetbrains = FONT_SETS.find((f) => f.id === "jetbrains-mono");
+    expect(jetbrains?.body.startsWith("'JetBrains Mono'")).toBe(true);
+    expect(jetbrains?.code.startsWith("'JetBrains Mono'")).toBe(true);
+    const literata = FONT_SETS.find((f) => f.id === "literata");
+    expect(literata?.body).toContain("'Literata'");
+  });
+
   it("includes modern universal theme presets", () => {
-    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining([
-      "githubDark",
-      "nord",
-      "tokyoNight",
-      "solarizedLight",
-      "solarizedDark",
-    ]));
+    expect(Object.keys(THEMES)).toEqual(
+      expect.arrayContaining(["githubDark", "nord", "tokyoNight", "solarizedLight", "solarizedDark"]),
+    );
+  });
+
+  it("includes the new refined editorial palettes", () => {
+    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]));
+  });
+});
+
+/** Minimal WCAG 2.x relative-luminance / contrast helpers (sRGB, hex input). */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const v =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((c) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a: string, b: string): number {
+  const l1 = relativeLuminance(a);
+  const l2 = relativeLuminance(b);
+  const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const NEW_PALETTE_KEYS = ["paper", "ink", "neutralLight", "neutralDark"] as const;
+
+describe("new palettes — WCAG AA", () => {
+  it.each(NEW_PALETTE_KEYS)("body text >= 4.5:1 on %s", (key) => {
+    const vars = THEMES[key];
+    const bg = vars["--bg-primary"];
+    expect(contrastRatio(vars["--text-primary"], bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(vars["--text-secondary"], bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(vars["--text-muted"], bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(NEW_PALETTE_KEYS)("controls / code >= 3:1 on %s", (key) => {
+    const vars = THEMES[key];
+    const bg = vars["--bg-primary"];
+    const bgSecondary = vars["--bg-secondary"];
+    const borderControl = vars["--border-control"];
+    const accent = vars["--accent"];
+    const codeBg = vars["--code-bg"];
+    const codeText = "#cdd6f4";
+    expect(borderControl ? contrastRatio(borderControl, bg) : 0).toBeGreaterThanOrEqual(3);
+    expect(borderControl ? contrastRatio(borderControl, bgSecondary) : 0).toBeGreaterThanOrEqual(3);
+    expect(accent ? contrastRatio(accent, bg) : 0).toBeGreaterThanOrEqual(4.5);
+    expect(accent ? contrastRatio(accent, vars["--accent-bg"]) : 0).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(codeText, codeBg)).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe("debounce", () => {
   it("delays execution by the given ms", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
     expect(count).toBe(0);
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(1);
   });
 
   it("cancels pending execution on cancel()", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
     fn.cancel();
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(0);
   });
 
   it("resets timer on each call (only last fires)", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise((r) => setTimeout(r, 30));
     fn();
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise((r) => setTimeout(r, 30));
     fn();
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(1);
   });
 });
@@ -483,5 +589,58 @@ describe("getDropFileType", () => {
   it("returns null for unsupported files", () => {
     expect(getDropFileType("archive.zip", "application/zip")).toBeNull();
     expect(getDropFileType("doc.pdf", "application/pdf")).toBeNull();
+  });
+});
+
+describe("getEffectiveTheme", () => {
+  it("resolves system to dark theme when systemPrefersDark is true", () => {
+    expect(getEffectiveTheme("system", true)).toBe("navy");
+  });
+
+  it("resolves system to light theme when systemPrefersDark is false", () => {
+    expect(getEffectiveTheme("system", false)).toBe("snow");
+  });
+
+  it("returns explicit light theme regardless of systemPrefersDark", () => {
+    expect(getEffectiveTheme("snow", true)).toBe("snow");
+    expect(getEffectiveTheme("snow", false)).toBe("snow");
+  });
+
+  it("returns explicit dark theme regardless of systemPrefersDark", () => {
+    expect(getEffectiveTheme("navy", false)).toBe("navy");
+    expect(getEffectiveTheme("githubDark", false)).toBe("githubDark");
+  });
+});
+
+describe("THEME_LIST / F5 cycle", () => {
+  it("THEME_LIST contains all keys of THEMES (single source of truth)", () => {
+    expect(THEME_LIST).toEqual(Object.keys(THEMES));
+  });
+
+  it("THEME_LIST excludes 'system' preference (19 themes, not 20)", () => {
+    expect(THEME_LIST).not.toContain("system");
+    expect(THEME_LIST).toHaveLength(19);
+  });
+
+  it("F5 cycle includes all 19 themes plus 'system' preference", () => {
+    const builtin = ["system", ...THEME_LIST];
+    expect(builtin).toHaveLength(20);
+    expect(builtin[0]).toBe("system");
+  });
+
+  it("F5 cycle wraps from last theme back to 'system'", () => {
+    const builtin = ["system", ...THEME_LIST];
+    const lastIdx = builtin.length - 1;
+    expect(builtin[(lastIdx + 1) % builtin.length]).toBe("system");
+  });
+
+  it("F5 cycle includes all 4 new palettes", () => {
+    const builtin = ["system", ...THEME_LIST];
+    expect(builtin).toEqual(expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]));
+  });
+
+  it("THEME_LIST preserves THEMES insertion order", () => {
+    expect(THEME_LIST[0]).toBe("snow");
+    expect(THEME_LIST[18]).toBe("neutralDark");
   });
 });

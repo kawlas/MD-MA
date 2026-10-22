@@ -1,7 +1,10 @@
 @import "tailwindcss";
+@import "./fonts.css";
 
 /* === Base Reset === */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -9,6 +12,11 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  /* UI role — chrome (toolbar/status/dialogs/TOC) uses the system sans.
+     Content roles stay separate: --font-text (MD body), --font-code (code). */
+  font-family: var(--font-ui);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -40,13 +48,22 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* === Default font vars === */
+/* === Font roles (system only; no downloads) === */
 :root {
-  --font-body: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
-  --font-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --font-size-body: 16px;
-  --font-size-code: 14px;
-  --line-height-body: 1.72;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-text: "New York", "Iowan Old Style", "Georgia", "Times New Roman", serif;
+  --font-code: "SF Mono", Menlo, Monaco, "Consolas", monospace;
+  --font-size-ui: 13px;
+  --font-size-text: 16px;
+  --font-size-code: 13.5px;
+  --line-height-ui: 1.3;
+  --line-height-text: 1.65;
+  --line-height-code: 1.6;
+  --measure: 68ch;
+  /* Role zaznaczenia tekstu (wcześniej brak — zaznaczenie było niewidoczne). */
+  --accent-selection: color-mix(in srgb, var(--accent) 28%, transparent);
+  /* Hover suwaka (wcześniej brak — hover nie miał koloru). */
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--scrollbar-thumb) 75%, var(--text-primary));
 }
 
 /* === Code Editor Textarea === */
@@ -55,14 +72,14 @@ body {
   color: var(--text-primary);
   font-family: var(--font-code);
   font-size: var(--font-size-code);
-  line-height: var(--line-height-body);
+  line-height: var(--line-height-code);
   tab-size: 2;
   resize: none;
   outline: none;
   border: none;
   width: 100%;
   height: 100%;
-  padding: 24px 24px;
+  padding: 24px;
   caret-color: var(--accent);
 }
 
@@ -74,128 +91,175 @@ body {
   background: var(--accent-selection);
 }
 
-/* === Markdown Preview — Apple-level refinement === */
+/* === Markdown Preview === */
+/* .md-preview is the CONTENT box (measure). The scrolling pane around it is
+   .preview-scroller — full width, full background, own scrollbar. */
 .md-preview {
-  font-family: var(--font-body);
-  font-size: var(--font-size-body);
-  line-height: 1.75;
+  font-family: var(--font-text);
+  font-size: var(--font-size-text);
+  line-height: var(--line-height-text);
   color: var(--text-primary);
   word-wrap: break-word;
-  font-feature-settings: 'kern' 1, 'liga' 1, 'pnum' 1;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
   -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* Scrolling pane — full pane width and background; only content is measured */
+.preview-scroller {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
 }
 
 .md-preview > *:first-child {
   margin-top: 0 !important;
 }
 
-/* Headings — refined modular scale: 1.25 */
-.md-preview h1 {
-  font-size: 2.25em;
-  font-weight: 700;
-  margin: 1.6em 0 0.4em;
-  padding-bottom: 0.25em;
-  border-bottom: 1px solid var(--border);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
+.md-preview pre,
+.md-preview table,
+.md-preview img {
+  max-width: 100%;
 }
 
-.md-preview h2 {
-  font-size: 1.65em;
-  font-weight: 650;
-  margin: 1.5em 0 0.4em;
-  padding-bottom: 0.2em;
-  border-bottom: 1px solid var(--border);
-  line-height: 1.2;
+/* Headings — 8px rhythm, no decoration.
+   Sizes scale with the body text size (--font-size-text), so the in-app font
+   size control keeps the hierarchy instead of flattening it. */
+.md-preview h1 {
+  font-size: calc(var(--font-size-text) * 1.75);
+  font-weight: 600;
+  margin: 2rem 0 0.5rem;
+  line-height: 1.15;
   letter-spacing: -0.015em;
 }
 
-.md-preview h3 {
-  font-size: 1.3em;
+.md-preview h2 {
+  font-size: calc(var(--font-size-text) * 1.375);
   font-weight: 600;
-  margin: 1.3em 0 0.35em;
-  line-height: 1.3;
+  margin: 2rem 0 0.5rem;
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
-.md-preview h4 {
-  font-size: 1.1em;
+.md-preview h3 {
+  font-size: calc(var(--font-size-text) * 1.125);
   font-weight: 600;
-  margin: 1.2em 0 0.3em;
+  margin: 1.5rem 0 0.4rem;
+  line-height: 1.3;
+}
+
+.md-preview h4 {
+  font-size: var(--font-size-text);
+  font-weight: 600;
+  margin: 1.25rem 0 0.35rem;
   line-height: 1.35;
-  color: var(--text-primary);
 }
 
 .md-preview h5 {
-  font-size: 1em;
-  font-weight: 600;
-  margin: 1em 0 0.3em;
+  font-size: calc(var(--font-size-text) * 0.9375);
+  font-weight: 500;
+  margin: 1rem 0 0.3rem;
   color: var(--text-secondary);
 }
 
 .md-preview h6 {
-  font-size: 0.85em;
-  font-weight: 600;
-  margin: 1em 0 0.3em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: calc(var(--font-size-text) * 0.8125);
+  font-weight: 500;
+  margin: 1rem 0 0.3rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .md-preview p {
   margin: 0.6em 0;
-  line-height: 1.75;
+  /* Follows the user's line-height setting (--line-height-text) */
+  line-height: var(--line-height-text);
 }
 
-/* Links — refined Apple-style underline animation */
+/* Links — simple, no animation */
 .md-preview a {
   color: var(--accent);
-  text-decoration: none;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-position: 0% 100%;
-  background-repeat: no-repeat;
-  background-size: 0% 1.5px;
-  transition: background-size 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.2s ease;
-  padding-bottom: 1px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
 }
 
 .md-preview a:hover {
-  background-size: 100% 1.5px;
+  text-decoration-color: var(--accent);
   color: var(--accent-hover);
 }
 
-.md-preview strong { font-weight: 650; }
-.md-preview em { font-style: italic; }
+.md-preview strong {
+  font-weight: 600;
+}
+.md-preview em {
+  font-style: italic;
+}
 
 .md-preview del {
   text-decoration: line-through;
   color: var(--text-secondary);
 }
 
-/* Blockquotes — elegant minimal */
+/* Blockquotes — minimal */
 .md-preview blockquote {
-  margin: 1.25em 0;
-  padding: 14px 20px;
-  border-left: 3px solid var(--accent);
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 2px solid var(--accent);
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-primary));
-  border-radius: 0 10px 10px 0;
+  background: transparent;
 }
 
-.md-preview blockquote p { margin: 0.25em 0; }
-.md-preview blockquote p:first-child { margin-top: 0; }
-.md-preview blockquote p:last-child { margin-bottom: 0; }
+.md-preview blockquote p {
+  margin: 0.25em 0;
+}
+.md-preview blockquote p:first-child {
+  margin-top: 0;
+}
+.md-preview blockquote p:last-child {
+  margin-bottom: 0;
+}
 
-/* Lists */
-.md-preview ul, .md-preview ol {
+/* Lists — markers restored (Tailwind preflight strips list-style) */
+.md-preview ul {
+  list-style-type: disc;
   margin: 0.5em 0;
   padding-left: 1.8em;
 }
 
+.md-preview ol {
+  list-style-type: decimal;
+  margin: 0.5em 0;
+  padding-left: 1.8em;
+}
+
+/* Nesting — a distinct marker per level */
+.md-preview ul ul {
+  list-style-type: circle;
+}
+.md-preview ul ul ul {
+  list-style-type: square;
+}
+.md-preview ol ol {
+  list-style-type: lower-alpha;
+}
+.md-preview ol ol ol {
+  list-style-type: lower-roman;
+}
+
+/* Task lists — GFM renders the checkbox inside li.task-list-item.
+   Drop the marker so the checkbox is not doubled; keep the indent. */
+.md-preview li.task-list-item {
+  list-style-type: none;
+}
+
 .md-preview li {
   margin: 0.2em 0;
-  line-height: 1.7;
+  line-height: var(--line-height-text);
 }
 
 .md-preview li > ul,
@@ -221,12 +285,12 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Code blocks — refined Apple style */
+/* Code blocks — plain */
 .md-preview pre {
-  margin: 1.25em 0;
-  border-radius: 14px;
+  margin: 1.25rem 0;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
 }
 
 .code-block-wrapper {
@@ -234,42 +298,46 @@ body {
 }
 
 .code-block-wrapper:hover .code-copy-btn {
-  opacity: 1 !important;
+  opacity: 1;
+}
+
+/* Keyboard focus must reveal the button too (it is transparent until hover) */
+.code-block-wrapper:focus-within .code-copy-btn {
+  opacity: 1;
 }
 
 .code-copy-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  padding: 4px 10px;
+  transition: opacity 0.15s ease;
+  padding: 3px 8px;
   font-size: 11px;
   font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(0,0,0,0.3);
-  color: rgba(255,255,255,0.7);
+  border-radius: 4px;
+  border: 1px solid var(--border-control, var(--border));
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .code-copy-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: white;
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .md-preview pre code {
   display: block;
   background: var(--code-bg, #1e1e2e) !important;
   color: #cdd6f4 !important;
-  padding: 18px 22px;
-  border-radius: 14px;
+  padding: 14px 16px;
+  border-radius: 8px;
   border: none;
   overflow-x: auto;
-  font-size: 13px;
-  line-height: 1.65;
+  font-family: var(--font-code);
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-code);
 }
 
 /* Code language label — subtle pill */
@@ -280,8 +348,8 @@ body {
   padding: 2px 8px;
   font-size: 10px;
   font-weight: 500;
-  color: rgba(255,255,255,0.35);
-  background: rgba(255,255,255,0.04);
+  color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 4px;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: 0.4px;
@@ -289,36 +357,76 @@ body {
 
 /* === Syntax Highlighting (Catppuccin Mocha) === */
 .md-preview pre code .hljs-keyword,
-.md-preview pre code .hljs-selector-tag { color: #cba6f7; }
+.md-preview pre code .hljs-selector-tag {
+  color: #cba6f7;
+}
 .md-preview pre code .hljs-string,
 .md-preview pre code .hljs-regexp,
-.md-preview pre code .hljs-addition { color: #a6e3a1; }
+.md-preview pre code .hljs-addition {
+  color: #a6e3a1;
+}
 .md-preview pre code .hljs-number,
 .md-preview pre code .hljs-built_in,
-.md-preview pre code .hljs-literal { color: #fab387; }
+.md-preview pre code .hljs-literal {
+  color: #fab387;
+}
 .md-preview pre code .hljs-comment,
-.md-preview pre code .hljs-quote { color: #6c7086; font-style: italic; }
+.md-preview pre code .hljs-quote {
+  color: #6c7086;
+  font-style: italic;
+}
 .md-preview pre code .hljs-title,
 .md-preview pre code .hljs-section,
-.md-preview pre code .hljs-function { color: #89b4fa; }
+.md-preview pre code .hljs-function {
+  color: #89b4fa;
+}
 .md-preview pre code .hljs-variable,
-.md-preview pre code .hljs-deletion { color: #f38ba8; }
+.md-preview pre code .hljs-deletion {
+  color: #f38ba8;
+}
 .md-preview pre code .hljs-type,
-.md-preview pre code .hljs-params { color: #f9e2af; }
+.md-preview pre code .hljs-params {
+  color: #f9e2af;
+}
 .md-preview pre code .hljs-attr,
-.md-preview pre code .hljs-attribute { color: #89dceb; }
-.md-preview pre code .hljs-tag { color: #89b4fa; }
-.md-preview pre code .hljs-name { color: #cba6f7; }
+.md-preview pre code .hljs-attribute {
+  color: #89dceb;
+}
+.md-preview pre code .hljs-tag {
+  color: #89b4fa;
+}
+.md-preview pre code .hljs-name {
+  color: #cba6f7;
+}
 .md-preview pre code .hljs-symbol,
-.md-preview pre code .hljs-bullet { color: #fab387; }
-.md-preview pre code .hljs-meta { color: #f9e2af; }
-.md-preview pre code .hljs-link { color: #89b4fa; text-decoration: underline; }
-.md-preview pre code .hljs-emphasis { font-style: italic; }
-.md-preview pre code .hljs-strong { font-weight: 700; }
-.md-preview pre code .hljs-selector-class { color: #f9e2af; }
-.md-preview pre code .hljs-selector-id { color: #cba6f7; }
-.md-preview pre code .hljs-template-variable { color: #f38ba8; }
-.md-preview pre code .hljs-subst { color: #cdd6f4; }
+.md-preview pre code .hljs-bullet {
+  color: #fab387;
+}
+.md-preview pre code .hljs-meta {
+  color: #f9e2af;
+}
+.md-preview pre code .hljs-link {
+  color: #89b4fa;
+  text-decoration: underline;
+}
+.md-preview pre code .hljs-emphasis {
+  font-style: italic;
+}
+.md-preview pre code .hljs-strong {
+  font-weight: 700;
+}
+.md-preview pre code .hljs-selector-class {
+  color: #f9e2af;
+}
+.md-preview pre code .hljs-selector-id {
+  color: #cba6f7;
+}
+.md-preview pre code .hljs-template-variable {
+  color: #f38ba8;
+}
+.md-preview pre code .hljs-subst {
+  color: #cdd6f4;
+}
 
 /* === Tables === */
 .md-preview table {
@@ -327,7 +435,7 @@ body {
   margin: 1.25em 0;
   display: block;
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 0.9em;
 }
 
@@ -366,33 +474,37 @@ body {
   vertical-align: middle;
 }
 
-/* === Callouts === */
+/* === Callouts ===
+   Reading content: no colored card backgrounds. The colored left border
+   alone carries the semantic type (note/tip/important/warning/caution).
+   Background is kept to --bg-primary so callouts sit flush with the
+   document canvas, producing an elegant one-page typographic flow. */
 .callout {
   margin: 1em 0;
-  padding: 14px 16px;
-  border-radius: 10px;
-  border-left: 4px solid;
-  background: var(--callout-note-bg);
+  padding: 10px 12px;
+  border-radius: 0;
+  border-left: 3px solid;
+  background: var(--bg-primary);
   border-color: var(--callout-note-border);
 }
 
 .callout[data-callout="tip"] {
-  background: var(--callout-tip-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-tip-border);
 }
 
 .callout[data-callout="important"] {
-  background: var(--callout-important-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-important-border);
 }
 
 .callout[data-callout="warning"] {
-  background: var(--callout-warning-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-warning-border);
 }
 
 .callout[data-callout="caution"] {
-  background: var(--callout-caution-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-caution-border);
 }
 
@@ -408,35 +520,43 @@ body {
   opacity: 0.85;
 }
 
-.callout-icon { font-size: 1.1em; }
+.callout-icon {
+  font-size: 1.1em;
+}
 
-.callout-body { font-size: 0.95em; }
+.callout-body {
+  font-size: 0.95em;
+}
 
-.callout-body p { margin: 0.25em 0; }
-.callout-body p:first-child { margin-top: 0; }
-.callout-body p:last-child { margin-bottom: 0; }
+.callout-body p {
+  margin: 0.25em 0;
+}
+.callout-body p:first-child {
+  margin-top: 0;
+}
+.callout-body p:last-child {
+  margin-bottom: 0;
+}
 
 /* === Drag Overlay === */
 .drag-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border: 2px dashed var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: overlayIn 0.2s ease;
+  animation: overlayIn 0.15s ease;
 }
 
 .drag-overlay-content {
   background: var(--bg-primary);
   padding: 28px 44px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   text-align: center;
   font-size: 16px;
   font-weight: 600;
@@ -453,18 +573,24 @@ body {
   background: var(--text-primary);
   color: var(--bg-primary);
   padding: 10px 24px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   z-index: 2000;
   opacity: 0;
   animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes toastIn {
-  0% { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.95); }
-  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 
 .toast-out {
@@ -472,8 +598,76 @@ body {
 }
 
 @keyframes toastOut {
-  0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.95); }
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px) scale(0.95);
+  }
+}
+
+/* === Persistent Storage Notice === */
+.storage-notice {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--callout-caution-bg, #fee2e2) 60%, transparent);
+  border-bottom: 1px solid var(--callout-caution-border, #ef4444);
+  font-size: 13px;
+  color: var(--text-primary);
+  animation: noticeIn 0.2s ease forwards;
+}
+
+@keyframes noticeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.storage-notice-msg {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.storage-notice-btn {
+  border: 1px solid var(--callout-caution-border, #ef4444);
+  background: var(--bg-primary);
+  color: var(--callout-caution-border, #ef4444);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.storage-notice-btn:hover {
+  background: var(--callout-caution-border, #ef4444);
+  color: var(--bg-primary);
+}
+
+.storage-notice-download {
+  /* Download button — same accent styling as toolbar save button */
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.storage-notice-download:hover {
+  background: var(--accent-hover, var(--accent));
 }
 
 /* === TOC Active Item === */
@@ -491,27 +685,17 @@ body {
 
 /* === Toolbar Container === */
 .toolbar-container {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  min-height: 50px;
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 14px;
+  padding: 0 12px;
   user-select: none;
   z-index: 100;
   position: relative;
   flex-wrap: nowrap;
-}
-
-.toolbar-container::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--border);
 }
 
 .toolbar-logo {
@@ -540,24 +724,24 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control, var(--border));
   background: var(--bg-primary);
   color: var(--text-secondary);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .focus-exit-btn:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
 }
 
 /* === Button styles === */
@@ -581,7 +765,7 @@ body {
 .toolbar-btn:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border-color: var(--border);
+  border-color: var(--border-control, var(--border));
 }
 
 .toolbar-btn-active {
@@ -627,7 +811,7 @@ body {
 .segmented-btn-active {
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* === Theme Select === */
@@ -636,7 +820,7 @@ body {
   padding: 5px 28px 5px 10px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control, var(--border));
   border-radius: 7px;
   background: transparent;
   color: var(--text-secondary);
@@ -652,10 +836,9 @@ body {
   color: var(--text-primary);
 }
 
+/* Focus ring comes from the shared :focus-visible rule (2px accent, offset 2px) */
 .theme-select:focus {
-  outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
 .theme-select option {
@@ -667,12 +850,9 @@ body {
 .md-preview img {
   max-width: 100%;
   height: auto;
-  border-radius: 12px;
-  margin: 1.2em 0;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  border-radius: 6px;
+  margin: 1rem 0;
 }
-
-
 
 /* === Editable Preview Blocks === */
 .editable-block {
@@ -707,7 +887,7 @@ body {
   padding: 0 !important;
 }
 
-.focus-mode-active .md-preview {
+.focus-mode-active .preview-scroller {
   padding: 56px 24px !important;
 }
 
@@ -715,7 +895,7 @@ body {
   padding: 56px 24px !important;
 }
 
-.view-preview .md-preview {
+.view-preview .preview-scroller {
   padding-top: 32px !important;
 }
 
@@ -734,9 +914,9 @@ body {
   padding-right: 8px;
   font-family: var(--font-code);
   font-size: var(--font-size-code);
-  line-height: var(--line-height-body);
+  line-height: var(--line-height-code);
   color: var(--text-muted);
-  opacity: 0.35;
+  opacity: 0.4;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
 }
@@ -768,8 +948,12 @@ body {
   .toolbar-divider {
     margin: 0 2px;
   }
-  .toolbar-logo { display: none; }
-  .filename-display { max-width: 72px !important; }
+  .toolbar-logo {
+    display: none;
+  }
+  .filename-display {
+    max-width: 72px !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -786,22 +970,37 @@ body {
     width: 14px;
     height: 14px;
   }
-  .toolbar-divider { margin: 0 1px; }
-  .segmented-btn { padding: 3px 6px; font-size: 11px; }
+  .toolbar-divider {
+    margin: 0 1px;
+  }
+  .segmented-btn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
   .filename-display,
-  .toolbar-left .toolbar-divider { display: none; }
-  .status-bar { display: none !important; }
+  .toolbar-left .toolbar-divider {
+    display: none;
+  }
+  .status-bar {
+    display: none !important;
+  }
   .toc-sidebar {
     position: fixed;
     inset: 42px auto 0 0;
     z-index: 500;
     height: calc(100vh - 42px) !important;
-    box-shadow: 12px 0 30px rgba(0,0,0,0.18);
+    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.18);
   }
   .app-main.view-split .preview-pane,
-  .app-main.view-split .split-divider { display: none; }
-  .md-preview { padding: 20px !important; }
-  .editor-textarea { padding: 20px !important; }
+  .app-main.view-split .split-divider {
+    display: none;
+  }
+  .preview-scroller {
+    padding: 20px !important;
+  }
+  .editor-textarea {
+    padding: 20px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -810,7 +1009,9 @@ body {
     padding: 0 4px;
     min-height: 40px;
   }
-  .hide-narrow { display: none !important; }
+  .hide-narrow {
+    display: none !important;
+  }
   .settings-dropdown {
     left: 8px !important;
     right: 8px !important;
@@ -820,8 +1021,13 @@ body {
 }
 
 @media (max-width: 400px) {
-  .toolbar-container { gap: 1px; min-height: 36px; }
-  .toolbar-btn { padding: 2px !important; }
+  .toolbar-container {
+    gap: 1px;
+    min-height: 36px;
+  }
+  .toolbar-btn {
+    padding: 2px !important;
+  }
 }
 
 /* === Inline filename input === */
@@ -832,12 +1038,7 @@ body {
   border: 1px solid var(--accent);
   border-radius: 5px;
   padding: 2px 6px;
-  outline: none;
   width: 100px;
-}
-
-.filename-input:focus {
-  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
 .filename-display {
@@ -850,9 +1051,16 @@ body {
 }
 
 /* === Smooth transitions === */
-.app-main { transition: background 0.3s ease; }
-.editor-pane, .preview-pane { transition: opacity 0.2s ease; }
-.focus-mode-active { transition: padding 0.3s ease; }
+.app-main {
+  transition: background 0.3s ease;
+}
+.editor-pane,
+.preview-pane {
+  transition: opacity 0.2s ease;
+}
+.focus-mode-active {
+  transition: padding 0.3s ease;
+}
 .app-main.view-split .split-divider:hover {
   background: var(--accent) !important;
   transition: background 0.15s ease;
@@ -863,15 +1071,25 @@ body {
   animation: panelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 @keyframes panelIn {
-  0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .modal-overlay {
   animation: overlayIn 0.15s ease forwards;
 }
 @keyframes overlayIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* === StatusBar === */
@@ -886,6 +1104,97 @@ body {
   color: var(--text-muted);
   user-select: none;
   min-height: 26px;
+}
+
+/* === Persistent storage notice === */
+.storage-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--callout-warning-bg);
+  border: 1px solid var(--callout-warning-border);
+  border-radius: 6px;
+  margin: 8px 12px;
+  font-size: 12px;
+  color: var(--callout-warning-border);
+  z-index: 50;
+}
+
+.storage-notice-msg {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.storage-notice-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.storage-notice-retry {
+  background: var(--callout-warning-border);
+  color: #fff;
+  border: none;
+}
+
+.storage-notice-retry:hover {
+  filter: brightness(1.1);
+}
+
+.storage-notice-download {
+  background: transparent;
+  color: var(--callout-warning-border);
+  border: 1px solid var(--callout-warning-border);
+}
+
+.storage-notice-download:hover {
+  background: var(--callout-warning-bg);
+}
+
+/* === Focus visible — 2px accent ring, 2px offset (brief) ===
+   Declared after the component rules so it is not defeated by legacy
+   `outline: none` declarations. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The editor fills the whole pane — a ring around all of the text is noise.
+   Focus is shown by the caret instead. */
+.editor-textarea:focus-visible {
+  outline: none;
+}
+
+/* Command palette rows are full-bleed inside the clipped list box: an outer
+   ring would be cut off, so the ring is drawn inside the row. */
+.command-row:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -2px;
+}
+
+/* === Reduced motion ===
+   Durations are collapsed instead of `animation: none`, so keyframes that
+   carry the final state (`forwards`: toast in/out, panel in, overlay in)
+   still land on their end state and the JS timers keep working. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* === Print styles === */
