@@ -1,33 +1,49 @@
-# Osadzone kroje czcionek (OFL)
+# Embedded OFL Fonts
 
-Lokalnie podłączone, w pełni offline fonty użyte przez zestawy `literata`, `sourceserif4`, `lora`, `atkinson`, `jetbrains-mono`.
+Locally bundled, fully offline fonts used by the `literata`, `sourceserif4`,
+`lora`, `atkinson`, and `jetbrains-mono` font sets.
 
-## Pochodzenie
+## Source
 
-| Krój | Źródło | Licencja | Wariant |
+| Font | Source | License | Variant |
 |---|---|---|---|
-| Literata | `google/fonts` repo, `ofl/literata/Literata[opsz,wght].ttf` (+ italic) | OFL | wght 400–700, opsz = 14 (świadomy kompromis wydania — bez automatycznego optical sizing) |
+| Literata | `google/fonts` repo, `ofl/literata/Literata[opsz,wght].ttf` (+ italic) | OFL | wght 400–700, opsz = 14 |
 | Source Serif 4 | `google/fonts` repo, `ofl/sourceserif4/SourceSerif4[opsz,wght].ttf` (+ italic) | OFL | wght 400–700, opsz = 14 |
 | Lora | `google/fonts` repo, `ofl/lora/Lora[wght].ttf` (+ italic) | OFL | wght 400–700 |
 | Atkinson Hyperlegible | `google/fonts` repo, static TTFs (Regular/Bold/Italic/BoldItalic) | OFL | wght 400 / 700 (+ italics) |
 | JetBrains Mono | `google/fonts` repo, `ofl/jetbrainsmono/JetBrainsMono[wght].ttf` (+ italic) | OFL | wght 400–700 |
 
-Pliki źródłowe `.ttf` nie trafiają do repo — wygenerowane `.woff2` są w `src/assets/fonts/*.woff2` po podzieleniu (subset) na zestaw `Latin-1 + Latin Extended-A (incl. polskie znaki) + interpunkcja + literały techniczne`.
+Source `.ttf` files are not committed to the repo. Generated `.woff2` subsets
+are in `src/assets/fonts/*.woff2`.
 
-### Kodowanie znaków
+## Character set
 
-Subset obejmuje: ASCII (U+0020–007E), Latin-1 (U+00A0–00FF), Latin Extended-A (U+0100–017F — w tym polskie znaki ą ć ę ł ń ó ś ź ż), interpunkcję ogólną (U+2000–206F), waluetę, znaki techniczne (U+2200–22FF). Kursywa i pogrubienie (700) są prawdziwe (osadzone warianty variable/static), nie syntetyzowane.
+Subsets cover: ASCII (U+0020–007E), Latin-1 (U+00A0–00FF), Latin Extended-A
+(U+0100–017F — including Polish characters ą ć ę ł ń ó ś ź ż), general
+punctuation (U+2000–206F), currency, and technical symbols (U+2200–22FF).
+Italic and bold (700) are true font variants, not synthetic.
 
-## Konfiguracja runtime
+## Runtime configuration
 
-- `@font-face` zamiast fontów zdalnych (`fonts.googleapis.com`) — `src/fonts.css` (`src/assets/fonts/*.woff2`).
-- Brak zapytań sieciowych fontów: po buildzie jeden plik `dist/index.html` (vite-plugin-singlefile + `build.assetsInlineLimit` 4MB) z danymi w base64 (WOFF2) — działa offline.
-- Fallbacki per rodzina: Literata → `Iowan Old Style`, Georgia, Times New Roman; Source Serif 4 → Georgia, Times New Roman; Lora → Georgia, Times New Roman; Atkinson Hyperlegible → system sans; JetBrains Mono → `SF Mono`, Menlo, Monaco, Consolas.
+- `@font-face` declarations in `src/fonts.css` (references
+  `src/assets/fonts/*.woff2`).
+- No network font requests: the build produces a single `dist/index.html`
+  (`vite-plugin-singlefile` + `build.assetsInlineLimit: 4MB`) with WOFF2 data
+  embedded as base64 — works offline.
+- Fallback per family: Literata → `Iowan Old Style`, Georgia, Times New Roman;
+  Source Serif 4 → Georgia, Times New Roman; Lora → Georgia, Times New Roman;
+  Atkinson Hyperlegible → system sans; JetBrains Mono → `SF Mono`, Menlo,
+  Monaco, Consolas.
 
-## Licencje
+## Licenses
 
-Każdy kroj ma własny plik OFL.txt w `src/assets/fonts/licenses/`. OFL jest licencją libre-fontów open-source — dozwolone jest użycie, modyfikacja i redistribucja z zachowaniem założeń OFL.
+Each font has its own OFL.txt file in `src/assets/fonts/licenses/`. OFL is an
+open-source license permitting use, modification, and redistribution with
+attribution.
 
-## Rozmiar
+## Size
 
-Suma subsetowanych WOFF2: ok. 549 KB surowych (~732 KB base64), w tym JetBrains Mono italic (114 KB, variable wght 400–700). Ostateczny artefakt: `dist/index.html` ~1,3 MB (build produkcyjny). Akceptowalny kompromis wydania zdecydowany przez radę (nie usuwamy kursyw, nie wyrzucamy fontów).
+Subsetted WOFF2 files total ~549 KB raw (~732 KB base64), including JetBrains
+Mono italic (114 KB, variable wght 400–700). Final artifact: `dist/index.html`
+~1.3 MB (production build). This is an acceptable trade-off — italics are not
+dropped and no fonts are removed.

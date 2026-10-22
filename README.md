@@ -6,11 +6,10 @@ Tailwind CSS 4 + TypeScript** and packaged as a native desktop window via **Taur
 (`vite-plugin-singlefile`) that is bundled into the app — no dev server and no code
 splitting at runtime.
 
-> **Status: provisional release candidate.** This README covers the
-> `kawlas/release-package` branch (tip `098eec2`, base `4f3d7b9`). It is a QA build,
-> **ad‑hoc signed only** (no Apple notarization), and does **not** include the
-> `fontfix` or `unfinishednativeIO` work from other branches. Treat it as a
-> candidate, not a final release.
+> **Status: release candidate.** This README covers the
+> `kawlas/final-closure` branch (tip `9b0693e`, parent `7536256`). It is a QA build,
+> **ad‑hoc signed only** (no Apple notarization), and does **not** include
+> Apple notarization. Treat it as a candidate for final review.
 
 ---
 
@@ -54,10 +53,17 @@ splitting at runtime.
 
 Download the release DMG and open it:
 
-1. `MD MA_0.1.0_aarch64.dmg` → open, then drag **MD MA** to `Applications`.
+1. `MD.MA.QA_0.1.0_aarch64.dmg` → open, then drag **MD MA** to `Applications`.
 2. Launch from `Launchpad` / `Applications`, or run directly from the mounted DMG.
 
-### QA build (this branch)
+Pre-built QA DMGs are in [`artifacts/`](artifacts/). Verify the checksum:
+
+```sh
+cd artifacts/v0.1.0-rc.1
+shasum -c SHA256SUMS.txt
+```
+
+### QA build identity (this branch)
 
 This branch was validated with a **QA build** that uses a **distinct bundle
 identifier and claims no file associations**, so it can never overwrite a production
@@ -73,8 +79,8 @@ install of `MD MA` and never touches existing `.md` associations:
 | Version | `0.1.0` (`CFBundleVersion` / `ShortVersionString`) |
 
 The production `src-tauri/tauri.conf.json` is **untouched** in this branch
-(identifier `com.mdeditor.md-editor`, name `MD MA`, `.md` associations intact). QA
-builds are produced only through a `/tmp` override config — see
+(identifier `com.mdeditor.md-editor`, name `MD MA`, `.md` associations intact).
+QA builds are produced via a `.cache/qa-config.json` override — see
 [Build from source › QA build](#qa-build-ad-hoc).
 
 ---
@@ -115,28 +121,29 @@ Output (default target dir): `src-tauri/target/release/bundle/dmg/MD MA_0.1.0_aa
 
 ### QA build (ad‑hoc, isolated identifier)
 
-The QA override lives outside the repo at `/tmp/md-ma-qa-config.json`:
+The QA override config is written to `.cache/qa-config.json` inside the
+project tree (not in `/tmp`):
 
 ```json
 { "productName": "MD MA QA", "identifier": "com.mdeditor.md-ma-qa", "bundle": { "fileAssociations": [] } }
 ```
 
-Reuse the shared cargo cache (do **not** run a parallel cargo owner against it):
+Build with temp/build dirs under the project `.cache/`:
 
 ```sh
-export CARGO_TARGET_DIR=/Volumes/MINI/md-ma-qa-target-20261022
-export TAURI_TARGET_DIR=/Volumes/MINI/md-ma-qa-target-20261022
+export CARGO_TARGET_DIR="$PWD/.cache/cargo"
+export TAURI_TARGET_DIR="$PWD/.cache/tauri"
 export APPLE_SIGNING_IDENTITY='-'
-cargo tauri build --config /tmp/md-ma-qa-config.json
+cargo tauri build --config "$PWD/.cache/qa-config.json"
 ```
 
 Artifacts (Apple Silicon, `aarch64-apple-darwin`, rustc/cargo 1.96.0,
 `cargo-tauri` 2.11.2):
 
 ```
-.../release/md-ma                                          # built binary
-.../release/bundle/macos/MD MA QA.app                       # app (cleaned after DMG creation)
-.../release/bundle/dmg/MD MA QA_0.1.0_aarch64.dmg            # distributable DMG
+.cache/tauri/release/md-ma                            # built binary
+.cache/tauri/release/bundle/macos/MD MA QA.app        # app (cleaned after DMG creation)
+.cache/tauri/release/bundle/dmg/MD MA QA_0.1.0_aarch64.dmg  # distributable DMG
 ```
 
 ### Production signing & notarization
@@ -228,24 +235,34 @@ is no `tailwind.config.*`; Tailwind v4 is consumed via `@import "tailwindcss"` i
 
 ---
 
-## QA / validation (this branch)
+## QA & validation
 
-| Item | Evidence |
-|---|---|
-| Branch / tip | `kawlas/release-package`, tip `098eec2` (parent `4f3d7b9`) |
-| Toolchain | rustc/cargo 1.96.0, `cargo-tauri` 2.11.2, `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin`, Xcode CLT |
-| Frontend gate | `tsc --noEmit` clean; ESLint **0 errors** (22 pre‑existing warnings, none introduced here); Vitest **106/106 passing** |
-| QA build | `cargo tauri build --config /tmp/md-ma-qa-config.json`, `APPLE_SIGNING_IDENTITY='-'` |
-| QA DMG | `/Volumes/MINI/md-ma-qa-target-20261022/release/bundle/dmg/MD MA QA_0.1.0_aarch64.dmg` — 3.83 MB, sha256 `1c26df78f750097a4dfe6a13e37e1cc0e1010daf95eeacd74ce637aff082bc88` |
-| `codesign --verify --deep --strict` | **valid on disk / satisfies its Designated Requirement** |
-| Bundle id / signature | `com.mdeditor.md-ma-qa`, ad‑hoc (`TeamIdentifier` not set) |
-| File associations | none (no `.md` claim) |
-| DMG integrity | `hdiutil verify` → checksum **VALID** (UDZO / zlib, CRC32) |
-| Launch test | `md-ma` process started, stayed alive, logged only a non‑fatal sandbox warning, then quit cleanly via SIGTERM — **no crash** |
-| Production config | `src-tauri/tauri.conf.json` restored to HEAD (clean diff): `com.mdeditor.md-editor` / "MD MA" / `.md` associations intact |
+Release-specific evidence (branch tip, toolchain, DMG checksums, lint/test
+counts) lives in [`docs/RELEASE.md`](docs/RELEASE.md) and is updated per
+build. This README describes current behavior and known limits only.
 
-No push, tag, merge, or release was performed. The repository has no git remote
-configured and none was added for this QA commit.
+## Known limits
+
+See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) for full user documentation and
+[`docs/KNOWN_LIMITS.md`](docs/KNOWN_LIMITS.md) for the curated list of
+confirmed limitations. Key items:
+
+- **Native file dialogs** — open/save dialogs require macOS Accessibility
+  permissions. On this machine they were **UNVERIFIED** (permission denied);
+  no bypass was attempted. Web fallback (Blob download) works without
+  permissions.
+- **No recent-files list** and **no live reload** if the source `.md` changes
+  on disk after opening.
+- **Images are inlined as base64** — pasting/drag-dropping an image embeds a
+  `data:` URI directly in the Markdown, so the `.md` grows with every image.
+- **Export to PDF** is delegated to the OS Print dialog
+  (<kbd>Cmd</kbd><kbd>+</kbd><kbd>Shift</kbd><kbd>+</kbd><kbd>P</kbd> → `window.print()` → “Save as PDF”).
+- **Code signing** is ad‑hoc only (no Apple notarization) on pre-release builds.
+
+## Development
+
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for build, test, lint, and
+Tauri packaging instructions.
 
 ---
 
