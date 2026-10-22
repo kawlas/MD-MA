@@ -44,6 +44,8 @@ function App() {
       return 'system';
     }
   });
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [customThemes, setCustomThemes] = useState<Record<string, ThemeVars>>(() => {
     try {
       const saved = localStorage.getItem('md-editor-custom-themes');
@@ -85,6 +87,7 @@ function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
   const [pendingAction, setPendingAction] = useState<'new' | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Preview debounce
   const [previewMarkdown, setPreviewMarkdown] = useState(markdown);
@@ -194,11 +197,15 @@ function App() {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
   }, []);
 
   // Compute effective theme and CSS variables
-  const effectiveTheme: EffectiveTheme = useMemo(() => getEffectiveTheme(theme as ThemeName), [theme]);
+  const effectiveTheme: EffectiveTheme = useMemo(
+    () => getEffectiveTheme(theme as ThemeName, systemPrefersDark),
+    [theme, systemPrefersDark],
+  );
   const themeVars = useMemo(() => {
     const vars = customThemes[theme] || THEMES[effectiveTheme];
     // Fill in derived control roles that older and custom themes may not carry:
@@ -211,27 +218,27 @@ function App() {
   }, [theme, customThemes, effectiveTheme]);
   const tocItems = useMemo(() => extractToc(markdown), [markdown]);
 
-  // Listen for system theme changes
+  // Listen for system theme changes (only while 'system' is selected)
   useEffect(() => {
     if (theme !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      // Force re-render by toggling theme
-      setTheme(t => t);
-    };
+    const handler = () => setSystemPrefersDark(mq.matches);
+    handler();
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, [theme]);
 
   // Toast helper
   const showToast = useCallback((msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastExiting(false);
     setToast(msg);
-    setTimeout(() => {
+    toastTimeoutRef.current = setTimeout(() => {
       setToastExiting(true);
-      setTimeout(() => {
+      toastTimeoutRef.current = setTimeout(() => {
         setToast(null);
         setToastExiting(false);
+        toastTimeoutRef.current = undefined;
       }, 300);
     }, 2000);
   }, []);

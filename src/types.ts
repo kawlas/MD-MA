@@ -516,9 +516,10 @@ export const THEME_LABELS: Record<string, string> = {
   neutralDark: 'Neutral Dark',
 };
 
-export function getEffectiveTheme(theme: ThemeName): EffectiveTheme {
+export function getEffectiveTheme(theme: ThemeName, systemPrefersDark?: boolean): EffectiveTheme {
   if (theme === 'system') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'navy' : 'snow';
+    const dark = systemPrefersDark ?? window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return dark ? 'navy' : 'snow';
   }
   return theme as EffectiveTheme;
 }

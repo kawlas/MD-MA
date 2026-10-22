@@ -16,6 +16,7 @@ import {
   stripMarkdown,
   debounce,
   getDropFileType,
+  getEffectiveTheme,
   THEMES,
   FONT_SETS,
 } from "./types";
@@ -563,5 +564,25 @@ describe("getDropFileType", () => {
   it("returns null for unsupported files", () => {
     expect(getDropFileType("archive.zip", "application/zip")).toBeNull();
     expect(getDropFileType("doc.pdf", "application/pdf")).toBeNull();
+  });
+});
+
+describe("getEffectiveTheme", () => {
+  it("resolves system to dark theme when systemPrefersDark is true", () => {
+    expect(getEffectiveTheme("system", true)).toBe("navy");
+  });
+
+  it("resolves system to light theme when systemPrefersDark is false", () => {
+    expect(getEffectiveTheme("system", false)).toBe("snow");
+  });
+
+  it("returns explicit light theme regardless of systemPrefersDark", () => {
+    expect(getEffectiveTheme("snow", true)).toBe("snow");
+    expect(getEffectiveTheme("snow", false)).toBe("snow");
+  });
+
+  it("returns explicit dark theme regardless of systemPrefersDark", () => {
+    expect(getEffectiveTheme("navy", false)).toBe("navy");
+    expect(getEffectiveTheme("githubDark", false)).toBe("githubDark");
   });
 });
