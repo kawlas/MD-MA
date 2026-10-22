@@ -16,7 +16,7 @@ const Preview = memo(forwardRef<HTMLDivElement, PreviewProps>(({ markdown, onScr
   return (
     <div
       ref={ref}
-      className="md-preview custom-scrollbar"
+      className="preview-scroller custom-scrollbar"
       style={{
         padding: "24px 24px",
         overflowY: "auto",
@@ -26,18 +26,20 @@ const Preview = memo(forwardRef<HTMLDivElement, PreviewProps>(({ markdown, onScr
       }}
       onScroll={onScroll}
     >
-      {markdown.trim().length === 0 && (
-        <p style={{ color: "var(--text-muted)", textAlign: "center", marginTop: 40, fontSize: 15 }}>
-          {_t('preview.empty')}
-        </p>
-      )}
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkCallouts]}
-        rehypePlugins={[rehypeHighlight]}
-        components={mdComponents}
-      >
-        {markdown}
-      </ReactMarkdown>
+      <div className="md-preview">
+        {markdown.trim().length === 0 && (
+          <p style={{ color: "var(--text-muted)", textAlign: "center", marginTop: 40, fontSize: 15 }}>
+            {_t('preview.empty')}
+          </p>
+        )}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkCallouts]}
+          rehypePlugins={[rehypeHighlight]}
+          components={mdComponents}
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 }));

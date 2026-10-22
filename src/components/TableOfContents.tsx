@@ -43,7 +43,8 @@ export default function TableOfContents({ markdown, activeId }: TableOfContentsP
   const handleClick = (line: number, id: string) => {
     const el = document.querySelector<HTMLElement>(`[data-source-start-line="${line}"]`) ?? document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     }
   };
 

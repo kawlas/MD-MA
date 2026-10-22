@@ -453,9 +453,12 @@ function App() {
       return;
     }
 
+    // The scrolling pane wraps the measured content box — copy the content only
+    const contentEl = (previewEl.querySelector('.md-preview') ?? previewEl) as HTMLElement;
+
     try {
-      const html = previewEl.innerHTML;
-      const text = previewEl.innerText;
+      const html = contentEl.innerHTML;
+      const text = contentEl.innerText;
       await navigator.clipboard.write([
         new ClipboardItem({
           'text/html': new Blob([html], { type: 'text/html' }),
@@ -1079,7 +1082,6 @@ function App() {
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: 14,
-                  outline: 'none',
                   width: '100%',
                   boxSizing: 'border-box',
                 }}
@@ -1097,7 +1099,6 @@ function App() {
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: 13,
-                  outline: 'none',
                   width: '100%',
                   boxSizing: 'border-box',
                   resize: 'vertical',

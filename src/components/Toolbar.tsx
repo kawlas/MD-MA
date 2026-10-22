@@ -96,7 +96,7 @@ export default memo(function Toolbar({
             onChange={(e) => setFileNameDraft(e.target.value)}
             onBlur={handleFileNameSave}
             onKeyDown={(e) => { if (e.key === 'Enter') handleFileNameSave(); if (e.key === 'Escape') setEditingFileName(false); }}
-            style={{ fontSize: 12, width: 100, color: 'var(--text-primary)', background: 'var(--bg-secondary)', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 6px', outline: 'none' }}
+            style={{ fontSize: 12, width: 100, color: 'var(--text-primary)', background: 'var(--bg-secondary)', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 6px' }}
           />
         ) : (
           fileName && (

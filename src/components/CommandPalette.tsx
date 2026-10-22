@@ -94,7 +94,6 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
               fontSize: 15,
-              outline: 'none',
               boxSizing: 'border-box',
             }}
             autoComplete="off"
@@ -111,7 +110,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
           {filtered.map((cmd, idx) => (
             <button
               key={cmd.id}
-              className="w-full text-left"
+              className="command-row w-full text-left"
               style={{
                 display: 'flex',
                 alignItems: 'center',
