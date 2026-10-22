@@ -132,6 +132,13 @@ const EN = {
   // Font sets
   'font_sets.title': 'Font Sets',
   'font_sets.sample': 'Aa Bb Cc — The quick brown fox jumps over the lazy dog.',
+  'font_sets.embedded': 'embedded',
+  'font_sets.system': 'system font',
+  'font_sets.note_literata': 'Book — screen serif',
+  'font_sets.note_sourceserif4': 'Neutral — workhorse serif',
+  'font_sets.note_lora': 'Editorial — contemporary serif',
+  'font_sets.note_atkinson': 'High legibility',
+  'font_sets.note_jetbrains_mono': 'Technical — monospace',
 };
 
 const PL: Record<TranslationKey, string> = {
@@ -262,6 +269,22 @@ const PL: Record<TranslationKey, string> = {
   // Font sets
   'font_sets.title': 'Zestawy czcionek',
   'font_sets.sample': 'Aa Bb Cc — Szybki brązowy lis przeskakuje nad leniwym psem.',
+  'font_sets.embedded': 'osadzony',
+  'font_sets.system': 'font systemowy',
+  'font_sets.note_literata': 'Książkowy — szeryf ekranowy',
+  'font_sets.note_sourceserif4': 'Neutralny — szeryf uniwersalny',
+  'font_sets.note_lora': 'Redakcyjny — szeryf współczesny',
+  'font_sets.note_atkinson': 'Wysoka czytelność',
+  'font_sets.note_jetbrains_mono': 'Techniczny — monospace',
+};
+
+/** Krótki opis zestawu czcionek (klucz = `id` zestawu). */
+export const FONT_SET_NOTES: Record<string, TranslationKey> = {
+  literata: 'font_sets.note_literata',
+  sourceserif4: 'font_sets.note_sourceserif4',
+  lora: 'font_sets.note_lora',
+  atkinson: 'font_sets.note_atkinson',
+  'jetbrains-mono': 'font_sets.note_jetbrains_mono',
 };
 
 export function t(locale: Locale, key: TranslationKey): string {

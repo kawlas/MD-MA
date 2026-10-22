@@ -1,6 +1,6 @@
 export type ViewMode = 'code' | 'preview' | 'split';
-export type ThemeName = 'system' | 'snow' | 'ivory' | 'navy' | 'midnight' | 'slate' | 'ocean' | 'storm' | 'twilight' | 'onyx' | 'sepia' | 'githubDark' | 'nord' | 'tokyoNight' | 'solarizedLight' | 'solarizedDark';
-export type EffectiveTheme = 'snow' | 'ivory' | 'navy' | 'midnight' | 'slate' | 'ocean' | 'storm' | 'twilight' | 'onyx' | 'sepia' | 'githubDark' | 'nord' | 'tokyoNight' | 'solarizedLight' | 'solarizedDark';
+export type ThemeName = 'system' | 'snow' | 'ivory' | 'navy' | 'midnight' | 'slate' | 'ocean' | 'storm' | 'twilight' | 'onyx' | 'sepia' | 'githubDark' | 'nord' | 'tokyoNight' | 'solarizedLight' | 'solarizedDark' | 'paper' | 'ink' | 'neutralLight' | 'neutralDark';
+export type EffectiveTheme = 'snow' | 'ivory' | 'navy' | 'midnight' | 'slate' | 'ocean' | 'storm' | 'twilight' | 'onyx' | 'sepia' | 'githubDark' | 'nord' | 'tokyoNight' | 'solarizedLight' | 'solarizedDark' | 'paper' | 'ink' | 'neutralLight' | 'neutralDark';
 
 export interface TocItem {
   id: string;
@@ -394,6 +394,126 @@ export const THEMES: Record<EffectiveTheme, ThemeVars> = {
     '--callout-caution-bg': '#431f20',
     '--callout-caution-border': '#dc322f',
   },
+
+  /* === Nowe palety (dodane 2026-10-22) ===
+     Każdy z 4 wariantów jest mierzony: tekst >= 4.5:1, obramowanie kontrolki >= 3:1.
+     Dowód: .design/presets-report.md + src/palette-contrast.test.ts */
+  paper: {
+    '--bg-primary': '#f7f4ec',
+    '--bg-secondary': '#eee9dd',
+    '--bg-toolbar': 'rgba(247,244,236,0.92)',
+    '--text-primary': '#1f1d18',
+    '--text-secondary': '#4d4839',
+    '--text-muted': '#6b6552',
+    '--border': '#ddd5c4',
+    '--border-control': '#847c66',
+    '--accent': '#1f6b4a',
+    '--accent-hover': '#17583c',
+    '--accent-bg': '#dcebe2',
+    '--accent-contrast': '#ffffff',
+    '--code-bg': '#22201b',
+    '--scrollbar-track': '#eee9dd',
+    '--scrollbar-thumb': '#c9c1ae',
+    '--callout-note-bg': '#e3e8ef',
+    '--callout-note-border': '#3b5f8f',
+    '--callout-tip-bg': '#e0ecdf',
+    '--callout-tip-border': '#3f7048',
+    '--callout-important-bg': '#f4ecd3',
+    '--callout-important-border': '#8a6d16',
+    '--callout-warning-bg': '#f7e6d5',
+    '--callout-warning-border': '#9c5a1c',
+    '--callout-caution-bg': '#f5e0dd',
+    '--callout-caution-border': '#a03a30',
+  },
+  ink: {
+    '--bg-primary': '#17140f',
+    '--bg-secondary': '#211d16',
+    '--bg-toolbar': 'rgba(23,20,15,0.92)',
+    '--text-primary': '#ece5d9',
+    '--text-secondary': '#bcb2a3',
+    '--text-muted': '#93897b',
+    '--border': '#2f2920',
+    '--border-control': '#716756',
+    '--accent': '#e0a355',
+    '--accent-hover': '#eeb871',
+    '--accent-bg': '#2c2317',
+    '--accent-contrast': '#17140f',
+    '--code-bg': '#100d0a',
+    '--scrollbar-track': '#211d16',
+    '--scrollbar-thumb': '#453d31',
+    '--callout-note-bg': '#1a1f26',
+    '--callout-note-border': '#6d8fb5',
+    '--callout-tip-bg': '#1a221a',
+    '--callout-tip-border': '#74a06f',
+    '--callout-important-bg': '#28230f',
+    '--callout-important-border': '#c2ab44',
+    '--callout-warning-bg': '#2c2010',
+    '--callout-warning-border': '#cf9040',
+    '--callout-caution-bg': '#2b1613',
+    '--callout-caution-border': '#cf6a5c',
+  },
+  neutralLight: {
+    '--bg-primary': '#f7f9fa',
+    '--bg-secondary': '#ecf0f3',
+    '--bg-toolbar': 'rgba(247,249,250,0.92)',
+    '--text-primary': '#15181b',
+    '--text-secondary': '#3f464d',
+    '--text-muted': '#59626a',
+    '--border': '#dae0e5',
+    '--border-control': '#767f88',
+    '--accent': '#0a626b',
+    '--accent-hover': '#084e55',
+    '--accent-bg': '#d8ebec',
+    '--accent-contrast': '#ffffff',
+    '--code-bg': '#1b2126',
+    '--scrollbar-track': '#ecf0f3',
+    '--scrollbar-thumb': '#c2cbd2',
+    '--callout-note-bg': '#e2e8ee',
+    '--callout-note-border': '#33587f',
+    '--callout-tip-bg': '#dfeae3',
+    '--callout-tip-border': '#356a52',
+    '--callout-important-bg': '#f1ecd9',
+    '--callout-important-border': '#7d6a1c',
+    '--callout-warning-bg': '#f5e5d8',
+    '--callout-warning-border': '#96551f',
+    '--callout-caution-bg': '#f4e0de',
+    '--callout-caution-border': '#9c3b36',
+  },
+  neutralDark: {
+    '--bg-primary': '#12161a',
+    '--bg-secondary': '#1a1f24',
+    '--bg-toolbar': 'rgba(18,22,26,0.92)',
+    '--text-primary': '#e8edf1',
+    '--text-secondary': '#b2bcc4',
+    '--text-muted': '#8c97a0',
+    '--border': '#262d33',
+    '--border-control': '#616d76',
+    '--accent': '#b8d16f',
+    '--accent-hover': '#cbe28d',
+    '--accent-bg': '#1e2512',
+    '--accent-contrast': '#12161a',
+    '--code-bg': '#0c1013',
+    '--scrollbar-track': '#1a1f24',
+    '--scrollbar-thumb': '#3a434a',
+    '--callout-note-bg': '#17202a',
+    '--callout-note-border': '#5b86b8',
+    '--callout-tip-bg': '#16241a',
+    '--callout-tip-border': '#5fa074',
+    '--callout-important-bg': '#26230f',
+    '--callout-important-border': '#bfae4a',
+    '--callout-warning-bg': '#2a1f11',
+    '--callout-warning-border': '#c99247',
+    '--callout-caution-bg': '#2a1512',
+    '--callout-caution-border': '#cf6a5f',
+  },
+};
+
+/** Czytelne nazwy motywów (camelCase -> "Neutral Light"). */
+export const THEME_LABELS: Record<string, string> = {
+  paper: 'Paper',
+  ink: 'Ink',
+  neutralLight: 'Neutral Light',
+  neutralDark: 'Neutral Dark',
 };
 
 export function getEffectiveTheme(theme: ThemeName): EffectiveTheme {
@@ -468,7 +588,14 @@ export function getStats(markdown: string): TextStats {
 }
 
 export interface FontSet {
+  /** Stabilny identyfikator (zapisuje się w localStorage — nie zmieniaj nazw istniejących presetów). */
+  id: string;
+  /** Stabilna nazwa techniczna (klucz zapisu preferencji). */
   label: string;
+  /** Nazwa pokazywana w UI (gdy brak — używany jest `label`). */
+  display?: string;
+  /** true = krój osadzony w aplikacji (działa offline, PL + kursywa + bold). */
+  bundled?: boolean;
   body: string;
   code: string;
   bodySize: number;
@@ -476,15 +603,60 @@ export interface FontSet {
   lineHeight: number;
 }
 
+/** Stosy kodu dla nowych, osadzonych krojów (JetBrains Mono z repo, z fallbackiem na SF Mono). */
+const MONO_BUNDLED = `'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Consolas', monospace`;
+
 export const FONT_SETS: FontSet[] = [
-  { label: 'System', body: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.72 },
-  { label: 'Inter + JetBrains', body: `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`, code: `'JetBrains Mono', 'SF Mono', 'Fira Code', monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
-  { label: 'New York', body: `'New York', 'Iowan Old Style', 'Georgia', 'Times New Roman', serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 17, codeSize: 13.5, lineHeight: 1.8 },
-  { label: 'SF Rounded', body: `'SF Pro Rounded', 'Rounded Mplus 1c', system-ui, sans-serif`, code: `'SF Mono', 'JetBrains Mono', monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.7 },
-  { label: 'Helvetica Neue', body: `'Helvetica Neue', 'Helvetica', 'Arial', sans-serif`, code: `'SF Mono', Menlo, monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
-  { label: 'Mono', body: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, code: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, bodySize: 15, codeSize: 14, lineHeight: 1.65 },
-  { label: 'Atkinson', body: `'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16.5, codeSize: 14, lineHeight: 1.78 },
-  { label: 'IBM Plex', body: `'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16, codeSize: 13.5, lineHeight: 1.72 },
+  { id: 'system', label: 'System', body: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.72 },
+  { id: 'inter-jetbrains', label: 'Inter + JetBrains', body: `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`, code: `'JetBrains Mono', 'SF Mono', 'Fira Code', monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
+  { id: 'new-york', label: 'New York', body: `'New York', 'Iowan Old Style', 'Georgia', 'Times New Roman', serif`, code: `'SF Mono', Menlo, Monaco, monospace`, bodySize: 17, codeSize: 13.5, lineHeight: 1.8 },
+  { id: 'sf-rounded', label: 'SF Rounded', body: `'SF Pro Rounded', 'Rounded Mplus 1c', system-ui, sans-serif`, code: `'SF Mono', 'JetBrains Mono', monospace`, bodySize: 16, codeSize: 14, lineHeight: 1.7 },
+  { id: 'helvetica-neue', label: 'Helvetica Neue', body: `'Helvetica Neue', 'Helvetica', 'Arial', sans-serif`, code: `'SF Mono', Menlo, monospace`, bodySize: 15.5, codeSize: 13.5, lineHeight: 1.68 },
+  { id: 'mono', label: 'Mono', body: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, code: `'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace`, bodySize: 15, codeSize: 14, lineHeight: 1.65 },
+  { id: 'atkinson', label: 'Atkinson', display: 'Atkinson Hyperlegible', bundled: true, body: `'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif`, code: MONO_BUNDLED, bodySize: 16.5, codeSize: 14, lineHeight: 1.78 },
+  { id: 'ibm-plex', label: 'IBM Plex', body: `'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif`, code: `'IBM Plex Mono', 'SF Mono', monospace`, bodySize: 16, codeSize: 13.5, lineHeight: 1.72 },
+
+  /* === Nowe zestawy z osadzonymi krojami OFL (src/assets/fonts) === */
+  {
+    id: 'literata',
+    bundled: true,
+    label: 'Literata',
+    body: `'Literata', 'Iowan Old Style', Georgia, 'Times New Roman', serif`,
+    code: MONO_BUNDLED,
+    bodySize: 17,
+    codeSize: 13.5,
+    lineHeight: 1.78,
+  },
+  {
+    id: 'sourceserif4',
+    bundled: true,
+    label: 'Source Serif 4',
+    body: `'Source Serif 4', Georgia, 'Times New Roman', serif`,
+    code: MONO_BUNDLED,
+    bodySize: 16,
+    codeSize: 13.5,
+    lineHeight: 1.62,
+  },
+  {
+    id: 'lora',
+    bundled: true,
+    label: 'Lora',
+    body: `'Lora', Georgia, 'Times New Roman', serif`,
+    code: MONO_BUNDLED,
+    bodySize: 16,
+    codeSize: 13.5,
+    lineHeight: 1.66,
+  },
+  {
+    id: 'jetbrains-mono',
+    bundled: true,
+    label: 'JetBrains Mono',
+    body: MONO_BUNDLED,
+    code: MONO_BUNDLED,
+    bodySize: 14.5,
+    codeSize: 14,
+    lineHeight: 1.58,
+  },
 ];
 
 export type BlockType = 'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' | 'paragraph' | 'code' | 'list' | 'blockquote' | 'table' | 'thematicBreak';

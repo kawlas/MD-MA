@@ -1,5 +1,5 @@
 import { type ThemeVars, type FontSet, THEMES, FONT_SETS } from "@/types";
-import { useT, useLocale } from "@/i18n";
+import { useT, useLocale, FONT_SET_NOTES } from "@/i18n";
 
 interface SettingsDialogProps {
   theme: string;
@@ -19,7 +19,7 @@ interface SettingsDialogProps {
   onResetFont: () => void;
 }
 
-const THEME_LIST = ['system', 'snow', 'githubDark', 'nord', 'tokyoNight', 'solarizedLight', 'solarizedDark', 'ivory', 'navy', 'midnight', 'slate', 'ocean', 'storm', 'twilight', 'onyx', 'sepia'] as const;
+const THEME_LIST = ['system', 'snow', 'githubDark', 'nord', 'tokyoNight', 'solarizedLight', 'solarizedDark', 'ivory', 'navy', 'midnight', 'slate', 'ocean', 'storm', 'twilight', 'onyx', 'sepia', 'paper', 'ink', 'neutralLight', 'neutralDark'] as const;
 
 export default function SettingsDialog(props: SettingsDialogProps) {
   const _t = useT();
@@ -111,14 +111,15 @@ export default function SettingsDialog(props: SettingsDialogProps) {
           <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>{_t('settings.font')}</h3>
           <div className="space-y-2">
             {FONT_SETS.map((fs) => (
+              <div key={fs.label}>
               <button
-                key={fs.label}
                 className="w-full text-left"
                 style={{
+                  width: '100%',
                   padding: '8px 12px',
                   borderRadius: 8,
                   background: fontSet.label === fs.label ? 'var(--accent)' : 'var(--bg-secondary)',
-                  color: fontSet.label === fs.label ? 'white' : 'var(--text-primary)',
+                  color: fontSet.label === fs.label ? 'var(--accent-contrast)' : 'var(--text-primary)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 13,
@@ -126,9 +127,15 @@ export default function SettingsDialog(props: SettingsDialogProps) {
                 }}
                 onClick={() => { setFontSet(fs); showToast(`${_t('app.font')}: ${fs.label}`); }}
               >
-                <span style={{ fontWeight: 600 }}>{fs.label}</span>
+                <span style={{ fontWeight: 600 }}>{fs.display ?? fs.label}</span>
                 <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 8, fontFamily: fs.body }}>{fs.body.split(',')[0].trim()}</span>
               </button>
+              {fs.bundled && (
+                <div style={{ fontSize: 11, opacity: 0.75, fontFamily: fs.body, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {_t('font_sets.embedded')} · {_t(FONT_SET_NOTES[fs.id] ?? 'font_sets.embedded')}
+                </div>
+              )}
+              </div>
             ))}
           </div>
         </div>
@@ -166,7 +173,7 @@ export default function SettingsDialog(props: SettingsDialogProps) {
               onClick={() => setLocale('en')}
               style={{
                 background: locale === 'en' ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: locale === 'en' ? 'white' : 'var(--text-primary)',
+                color: locale === 'en' ? 'var(--accent-contrast)' : 'var(--text-primary)',
                 borderColor: locale === 'en' ? 'var(--accent)' : 'var(--border)',
               }}
             >
@@ -177,7 +184,7 @@ export default function SettingsDialog(props: SettingsDialogProps) {
               onClick={() => setLocale('pl')}
               style={{
                 background: locale === 'pl' ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: locale === 'pl' ? 'white' : 'var(--text-primary)',
+                color: locale === 'pl' ? 'var(--accent-contrast)' : 'var(--text-primary)',
                 borderColor: locale === 'pl' ? 'var(--accent)' : 'var(--border)',
               }}
             >

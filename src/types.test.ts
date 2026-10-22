@@ -398,7 +398,28 @@ describe("visual presets", () => {
       "Mono",
       "Atkinson",
       "IBM Plex",
+      "Literata",
+      "Source Serif 4",
+      "Lora",
+      "JetBrains Mono",
     ]);
+  });
+
+  it("marks the new offline-bundled font presets", () => {
+    const embedded = FONT_SETS.filter((f) => f.bundled);
+    expect(embedded.map((f) => f.id)).toEqual([
+      "atkinson",
+      "literata",
+      "sourceserif4",
+      "lora",
+      "jetbrains-mono",
+    ]);
+    expect(FONT_SETS.find((f) => f.id === "atkinson")?.display).toBe("Atkinson Hyperlegible");
+    const jetbrains = FONT_SETS.find((f) => f.id === "jetbrains-mono");
+    expect(jetbrains?.body.startsWith("'JetBrains Mono'")).toBe(true);
+    expect(jetbrains?.code.startsWith("'JetBrains Mono'")).toBe(true);
+    const literata = FONT_SETS.find((f) => f.id === "literata");
+    expect(literata?.body).toContain("'Literata'");
   });
 
   it("includes modern universal theme presets", () => {
@@ -409,6 +430,65 @@ describe("visual presets", () => {
       "solarizedLight",
       "solarizedDark",
     ]));
+  });
+
+  it("includes the new refined editorial palettes", () => {
+    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining([
+      "paper",
+      "ink",
+      "neutralLight",
+      "neutralDark",
+    ]));
+  });
+});
+
+/** Minimal WCAG 2.x relative-luminance / contrast helpers (sRGB, hex input). */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((c) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a: string, b: string): number {
+  const l1 = relativeLuminance(a);
+  const l2 = relativeLuminance(b);
+  const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const NEW_PALETTE_KEYS = ["paper", "ink", "neutralLight", "neutralDark"] as const;
+
+describe("new palettes — WCAG AA", () => {
+  it.each(NEW_PALETTE_KEYS)("body text >= 4.5:1 on %s", (key) => {
+    const vars = THEMES[key];
+    const bg = vars["--bg-primary"];
+    expect(contrastRatio(vars["--text-primary"], bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(vars["--text-secondary"], bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(vars["--text-muted"], bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(NEW_PALETTE_KEYS)("controls / focus / code >= 3:1 on %s", (key) => {
+    const vars = THEMES[key];
+    const bg = vars["--bg-primary"];
+    const bgSecondary = vars["--bg-secondary"];
+    const borderControl = vars["--border-control"];
+    const accent = vars["--accent"];
+    const codeBg = vars["--code-bg"];
+    const codeText = "#cdd6f4";
+    expect(borderControl ? contrastRatio(borderControl, bg) : 0).toBeGreaterThanOrEqual(3);
+    expect(borderControl ? contrastRatio(borderControl, bgSecondary) : 0).toBeGreaterThanOrEqual(3);
+    expect(accent ? contrastRatio(accent, bg) : 0).toBeGreaterThanOrEqual(4.5);
+    expect(accent ? contrastRatio(accent, vars["--accent-bg"]) : 0).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(codeText, codeBg)).toBeGreaterThanOrEqual(3);
   });
 });
 

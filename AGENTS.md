@@ -52,7 +52,7 @@ All read on mount and persisted via `useEffect`.
 | `Cmd/Ctrl+N` | New file |
 | `Cmd/Ctrl+Shift+C` | Copy rendered as rich text |
 | `Cmd/Ctrl+Shift+P` | Export PDF (triggers `window.print()`) |
-| `F5` | Cycle built-in theme (system→sepia→nord→solarized→system) |
+| `F5` | Cycle built-in theme (list includes 4 new refined palettes after `sepia`) |
 
 ## macOS binary (Tauri)
 
@@ -78,7 +78,7 @@ All custom items relayed to frontend via `handle.emit("menu-event", id)`. Built-
 
 - **Editable preview** — `EditablePreview.tsx` renders markdown as clickable blocks; click any block to edit it inline (Notion-style). Fully separate from the raw code editor.
 - **Focus mode** — toggled via toolbar button; hides toolbar/statusbar, enlarges padding, clean writing environment.
-- **10 themes** — Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight, Onyx, Sepia. F5 cycles built-ins.
+- **20 built-in themes** — Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight, Onyx, Sepia, githubDark, nord, tokyoNight, solarizedLight, solarizedDark, paper, ink, neutralLight, neutralDark, plus custom themes. F5 cycles the full built-in list.
 - **Copy button** on code blocks — appears on hover over `<pre>` blocks in the preview.
 - **Animated link underlines** — CSS-only slide-in underline on hover.
 - **Command palette** — `CommandPalette.tsx`, triggered via Cmd+K. Searches/filters commands with keyboard navigation.

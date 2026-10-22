@@ -58,7 +58,12 @@ function App() {
       const saved = localStorage.getItem('md-editor-font-set');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return FONT_SETS.find(f => f.label === parsed.label) || FONT_SETS[0];
+        // Stare preferencje trzymają tylko `label`; nowe — `id` + `label`.
+        return (
+          FONT_SETS.find(f => f.id === parsed.id) ||
+          FONT_SETS.find(f => f.label === parsed.label) ||
+          FONT_SETS[0]
+        );
       }
     } catch { /* ignore */ }
     return FONT_SETS.find(f => f.label === 'New York') || FONT_SETS[0];
@@ -194,7 +199,16 @@ function App() {
 
   // Compute effective theme and CSS variables
   const effectiveTheme: EffectiveTheme = useMemo(() => getEffectiveTheme(theme as ThemeName), [theme]);
-  const themeVars = useMemo(() => customThemes[theme] || THEMES[effectiveTheme], [theme, customThemes, effectiveTheme]);
+  const themeVars = useMemo(() => {
+    const vars = customThemes[theme] || THEMES[effectiveTheme];
+    // Fill in derived control roles that older and custom themes may not carry:
+    // --border-control (control boundaries >= 3:1) and --accent-contrast (for light accents).
+    return {
+      ...vars,
+      '--border-control': vars['--border-control'] ?? vars['--border'] ?? 'transparent',
+      '--accent-contrast': vars['--accent-contrast'] ?? '#ffffff',
+    };
+  }, [theme, customThemes, effectiveTheme]);
   const tocItems = useMemo(() => extractToc(markdown), [markdown]);
 
   // Listen for system theme changes
@@ -1083,7 +1097,7 @@ function App() {
                   fontFamily: 'monospace',
                 }}
               />
-              <button className="toolbar-btn" onClick={handleSaveCustomTheme} style={{ background: 'var(--accent)', color: 'white', border: 'none' }}>
+              <button className="toolbar-btn" onClick={handleSaveCustomTheme} style={{ background: 'var(--accent)', color: 'var(--accent-contrast)', border: 'none' }}>
                 {_t('theme.save')}
               </button>
             </div>
@@ -1116,7 +1130,7 @@ function App() {
               <button className="toolbar-btn" onClick={handleConfirmDiscard} style={{ color: '#ef4444', borderColor: '#ef4444' }}>
                 {_t('app.unsaved.discard')}
               </button>
-              <button className="toolbar-btn" onClick={handleConfirmSave} style={{ background: 'var(--accent)', color: 'white', border: 'none' }}>
+              <button className="toolbar-btn" onClick={handleConfirmSave} style={{ background: 'var(--accent)', color: 'var(--accent-contrast)', border: 'none' }}>
                 {_t('app.unsaved.save')}
               </button>
             </div>
@@ -1175,7 +1189,7 @@ function App() {
                     padding: '10px 12px',
                     borderRadius: 8,
                     background: fontSet.label === fs.label ? 'var(--accent)' : 'var(--bg-secondary)',
-                    color: fontSet.label === fs.label ? 'white' : 'var(--text-primary)',
+                    color: fontSet.label === fs.label ? 'var(--accent-contrast)' : 'var(--text-primary)',
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: 14,

@@ -16,4 +16,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  // Embed font files (WOFF2) as base64 data URIs inside the CSS -> single-file build keeps working offline.
+  // Default (4096) would emit separate font files; 4MB inlines everything referenced from CSS.
+  build: {
+    assetsInlineLimit: 4 * 1024 * 1024,
+  },
 });

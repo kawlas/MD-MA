@@ -120,7 +120,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
                 padding: '8px 16px',
                 border: 'none',
                 background: idx === selectedIndex ? 'var(--accent)' : 'transparent',
-                color: idx === selectedIndex ? 'white' : 'var(--text-primary)',
+                color: idx === selectedIndex ? 'var(--accent-contrast)' : 'var(--text-primary)',
                 cursor: 'pointer',
                 fontSize: 14,
                 transition: 'background 0.1s',

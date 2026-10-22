@@ -98,6 +98,15 @@ const EN_KEYS: TranslationKey[] = [
   "theme.delete",
   "code.copy",
   "code.copied",
+  "font_sets.title",
+  "font_sets.sample",
+  "font_sets.embedded",
+  "font_sets.system",
+  "font_sets.note_literata",
+  "font_sets.note_sourceserif4",
+  "font_sets.note_lora",
+  "font_sets.note_atkinson",
+  "font_sets.note_jetbrains_mono",
 ];
 
 describe("i18n", () => {
