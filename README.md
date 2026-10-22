@@ -19,22 +19,23 @@ splitting at runtime.
   `requestAnimationFrame` throttle and a 50 ms timeout lock to prevent feedback loops.
 - **Editable preview** — rendered Markdown becomes clickable blocks; click any block to
   edit it inline (Notion‑style). Fully independent of the raw code editor.
-- **20 built‑in themes** (Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight,
+- **19 built‑in themes** (Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight,
   Onyx, Sepia, `githubDark`, `nord`, `tokyoNight`, `solarizedLight`, `solarizedDark`,
-  `paper`, `ink`, `neutralLight`, `neutralDark`, `system`) plus user‑defined **custom
-  themes**. Press <kbd>F5</kbd> to cycle; `system` reacts live to the OS light/dark
-  preference via `matchMedia`.
+  `paper`, `ink`, `neutralLight`, `neutralDark`) plus the live `system` OS preference —
+  20 entries cycled by <kbd>F5</kbd>. Custom themes are also supported.
+  `system` reacts live to the OS light/dark preference via `matchMedia`.
 - **Command palette** — <kbd>Cmd</kbd><kbd>+</kbd><kbd>K</kbd>, with keyboard navigation
   and filtering.
 - **Focus mode** — hides the toolbar/status bar and expands the editor.
-- **Four font presets** with embedded OFL web‑fonts shipped as `woff2` (Literata,
-  Source Serif 4, Lora, Atkinson, JetBrains Mono) with license text.
+- **12 font sets** with embedded OFL web‑fonts shipped as `woff2` for 5 presets
+  (Literata, Source Serif 4, Lora, Atkinson Hyperlegible, JetBrains Mono) with
+  license text.
 - **Image paste & drop** — paste (<kbd>Cmd</kbd><kbd>+</kbd><kbd>V</kbd>) or drag‑drop
   an image file; it is stored **inline as a base64 `data:` URI** in the Markdown (no
   external asset files).
 - **Syntax highlighting** via `rehype-highlight` (Catppuccin Mocha palette overrides
   in CSS) with a **Copy** button that appears on hover over `<pre>` blocks.
-- **Animated link underlines** — CSS‑only slide‑in underline on hover.
+- **Link styling** — accent-colored links with hover state change.
 - **Table of Contents** — collapsible sidebar, heading navigation, scroll‑synced.
 - **File ops** — open `.md`/`.txt` (via a hidden `<input type="file">`), drag‑and‑drop
   text & images, and **download** the document.
@@ -167,7 +168,7 @@ the DMG as a build artifact.
 | <kbd>Cmd</kbd><kbd>+</kbd><kbd>Shift</kbd><kbd>+</kbd><kbd>C</kbd> | Copy rendered output as rich text (HTML + plain) |
 | <kbd>Cmd</kbd><kbd>+</kbd><kbd>Shift</kbd><kbd>+</kbd><kbd>P</kbd> | Export PDF (triggers `window.print()`) |
 | <kbd>Cmd</kbd><kbd>+</kbd><kbd>K</kbd> | Open command palette |
-| <kbd>F5</kbd> | Cycle built‑in themes (20 + `system`) |
+| <kbd>F5</kbd> | Cycle built‑in themes (19 + `system` = 20) |
 
 ### macOS menu bar
 

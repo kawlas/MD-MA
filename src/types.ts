@@ -1196,7 +1196,7 @@ class MarkdownParser:
 | Code Mode | ✅ | Raw markdown editing |
 | Preview Mode | ✅ | Rendered output |
 | Split View | ✅ | Side by side with scroll sync |
-| Themes | ✅ | 4 themes available |
+| Themes | ✅ | 19 themes available |
 | Syntax Highlighting | ✅ | 20+ languages |
 | Copy Rendered | ✅ | Rich text clipboard |
 
@@ -1206,7 +1206,7 @@ class MarkdownParser:
 - [x] Syntax highlighting
 - [x] Copy rendered markdown
 - [x] Table of Contents
-- [x] 4 beautiful themes
+- [x] 19 beautiful themes
 - [ ] PDF export
 - [ ] Custom themes
 

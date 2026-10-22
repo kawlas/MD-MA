@@ -30,7 +30,8 @@ What to verify manually (requires granting Accessibility permission):
 |---|---|
 | Images inlined as base64 | Paste/drag-drop embeds a `data:` URI directly in the Markdown. The `.md` grows with every image; there is no external asset folder. |
 | PDF export via Print dialog | <kbd>Cmd</kbd><kbd>+</kbd><kbd>Shift</kbd><kbd>+</kbd><kbd>P</kbd> → `window.print()` → “Save as PDF”. |
-| HTML passthrough | `ReactMarkdown` passes raw HTML through by default (no sanitization). |
+| Raw HTML handling | `ReactMarkdown` has `skipHtml` not set (defaults to `false`), which means raw HTML nodes in the markdown source are preserved as text nodes rather than rendered as live DOM. No `rehypeRaw` plugin is configured, so raw HTML is never executed — it is rendered as visible text. |
+| CSP | `tauri.conf.json` sets `"csp": null` (no Content-Security-Policy). This is documented as-is; no false security claims. |
 
 ## Code signing
 
