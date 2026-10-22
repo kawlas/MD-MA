@@ -107,6 +107,13 @@ const EN_KEYS: TranslationKey[] = [
   "font_sets.note_lora",
   "font_sets.note_atkinson",
   "font_sets.note_jetbrains_mono",
+  "app.storage.error.quota_exceeded",
+  "app.storage.error.security",
+  "app.storage.error.unavailable",
+  "app.storage.error.recoverable",
+  "app.storage.error.retry",
+  "app.storage.error.retry_success",
+  "app.storage.error.retry_failed",
 ];
 
 describe("i18n", () => {

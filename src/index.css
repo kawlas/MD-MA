@@ -520,6 +520,62 @@ body {
   100% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.95); }
 }
 
+/* === Persistent Storage Notice === */
+.storage-notice {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--callout-caution-bg, #fee2e2) 60%, transparent);
+  border-bottom: 1px solid var(--callout-caution-border, #ef4444);
+  font-size: 13px;
+  color: var(--text-primary);
+  animation: noticeIn 0.2s ease forwards;
+}
+
+@keyframes noticeIn {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.storage-notice-msg {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.storage-notice-btn {
+  border: 1px solid var(--callout-caution-border, #ef4444);
+  background: var(--bg-primary);
+  color: var(--callout-caution-border, #ef4444);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.storage-notice-btn:hover {
+  background: var(--callout-caution-border, #ef4444);
+  color: var(--bg-primary);
+}
+
+.storage-notice-download {
+  /* Download button — same accent styling as toolbar save button */
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.storage-notice-download:hover {
+  background: var(--accent-hover, var(--accent));
+}
+
 /* === TOC Active Item === */
 .toc-item-active {
   color: var(--accent) !important;
@@ -911,6 +967,56 @@ body {
   color: var(--text-muted);
   user-select: none;
   min-height: 26px;
+}
+
+/* === Persistent storage notice === */
+.storage-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--callout-warning-bg);
+  border: 1px solid var(--callout-warning-border);
+  border-radius: 6px;
+  margin: 8px 12px;
+  font-size: 12px;
+  color: var(--callout-warning-border);
+  z-index: 50;
+}
+
+.storage-notice-msg {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.storage-notice-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.storage-notice-retry {
+  background: var(--callout-warning-border);
+  color: #fff;
+  border: none;
+}
+
+.storage-notice-retry:hover {
+  filter: brightness(1.1);
+}
+
+.storage-notice-download {
+  background: transparent;
+  color: var(--callout-warning-border);
+  border: 1px solid var(--callout-warning-border);
+}
+
+.storage-notice-download:hover {
+  background: var(--callout-warning-bg);
 }
 
 /* === Focus visible — 2px accent ring, 2px offset (brief) ===

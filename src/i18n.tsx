@@ -34,6 +34,14 @@ const EN = {
   'app.toast.drop_hint': 'Please drop a .md, .txt, .html, .json, .csv, or image file',
   'app.about': 'MD MA v0.1.0 — a premium Markdown editor',
   'app.font': 'Font',
+  'app.storage.error.quota_exceeded': 'Storage quota exceeded. Editor data will be preserved in memory. Use "Download" to save your work.',
+  'app.storage.error.security': 'Storage access denied. Editor data will be preserved in memory. Use "Download" to save your work.',
+  'app.storage.error.unavailable': 'Storage unavailable. Editor data will be preserved in memory. Use "Download" to save your work.',
+  'app.storage.error.recoverable': 'Storage issues detected. Click "Download" to save your work as a file.',
+  'app.storage.error.retry': 'Retry',
+  'app.storage.error.retry_success': 'Storage recovered successfully!',
+  'app.storage.error.retry_failed': 'Storage still unavailable.',
+
 
   // Toolbar
   'toolbar.new': 'New',
@@ -171,6 +179,13 @@ const PL: Record<TranslationKey, string> = {
   'app.toast.drop_hint': 'Przeciągnij plik .md, .txt, .html, .json, .csv lub obraz',
   'app.about': 'MD MA v0.1.0 — zaawansowany edytor Markdown',
   'app.font': 'Czcionka',
+  'app.storage.error.quota_exceeded': 'Limit zapasu zgromadzonego został przekroczony. Dane edytora zachowają się w pamięci. Użyj „Pobierz”, by zapisać pracę.',
+  'app.storage.error.security': 'Brak dostępu do zapisu. Dane edytora zachowają się w pamięci. Użyj „Pobierz”, by zapisać pracę.',
+  'app.storage.error.unavailable': 'Zapisy nie są dostępne. Dane edytora zachowają się w pamięci. Użyj „Pobierz”, by zapisać pracę.',
+  'app.storage.error.recoverable': 'Wykryto problemy z zapisywaniem. Kliknij „Pobierz”, by zapisać pracę.',
+  'app.storage.error.retry': 'Spróbuj ponownie',
+  'app.storage.error.retry_success': 'Dostęp do zapisu przywrócony!',
+  'app.storage.error.retry_failed': 'Zapisy nadal nie są dostępne.',
 
   // Toolbar
   'toolbar.new': 'Nowy',

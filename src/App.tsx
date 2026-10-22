@@ -8,6 +8,7 @@ import TableOfContents from '@/components/TableOfContents';
 import StatusBar from '@/components/StatusBar';
 import CommandPalette from '@/components/CommandPalette';
 import SettingsDialog from '@/components/SettingsDialog';
+import { checkStorage, safeGetItem, safeSetItem, getStorageError, getStorageErrorKey, retryStorage, type StorageError } from '@/utils/storage';
 import {
   type ViewMode,
   type ThemeName,
@@ -30,36 +31,30 @@ import { useT } from '@/i18n';
 function App() {
   const _t = useT();
   const [markdown, setMarkdown] = useState(() => {
-    try {
-      const saved = localStorage.getItem('md-editor-content');
-      return saved || SAMPLE_MARKDOWN;
-    } catch {
-      return SAMPLE_MARKDOWN;
-    }
+    const saved = safeGetItem('md-editor-content');
+    return saved || SAMPLE_MARKDOWN;
   });
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem('md-editor-theme') || 'system';
-    } catch {
-      return 'system';
-    }
+    const saved = safeGetItem('md-editor-theme');
+    return saved || 'system';
   });
 
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [customThemes, setCustomThemes] = useState<Record<string, ThemeVars>>(() => {
+    const saved = safeGetItem('md-editor-custom-themes');
+    if (!saved) return {};
     try {
-      const saved = localStorage.getItem('md-editor-custom-themes');
-      return saved ? JSON.parse(saved) : {};
+      return JSON.parse(saved) as Record<string, ThemeVars>;
     } catch {
       return {};
     }
   });
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [fontSet, setFontSet] = useState<FontSet>(() => {
-    try {
-      const saved = localStorage.getItem('md-editor-font-set');
-      if (saved) {
+    const saved = safeGetItem('md-editor-font-set');
+    if (saved) {
+      try {
         const parsed = JSON.parse(saved);
         // Stare preferencje trzymają tylko `label`; nowe — `id` + `label`.
         return (
@@ -67,8 +62,8 @@ function App() {
           FONT_SETS.find(f => f.label === parsed.label) ||
           FONT_SETS[0]
         );
-      }
-    } catch { /* ignore */ }
+      } catch { /* ignore parse errors */ }
+    }
     return FONT_SETS.find(f => f.label === 'New York') || FONT_SETS[0];
   });
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -79,7 +74,8 @@ function App() {
   const [showToc, setShowToc] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [splitRatio, setSplitRatio] = useState(() => {
-    try { return Number(localStorage.getItem('md-editor-split-ratio')) || 0.5; } catch { return 0.5; }
+    const saved = safeGetItem('md-editor-split-ratio');
+    return saved ? Number(saved) || 0.5 : 0.5;
   });
   const [activeHeadingId, setActiveHeadingId] = useState<string | undefined>(undefined);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -105,11 +101,19 @@ function App() {
 
   // Font/line adjustments (relative to current font set)
   const [fontSizeDelta, setFontSizeDelta] = useState(() => {
-    try { return Number(localStorage.getItem('md-editor-font-size-delta')) || 0; } catch { return 0; }
+    const saved = safeGetItem('md-editor-font-size-delta');
+    return saved ? Number(saved) || 0 : 0;
   });
   const [lineHeightDelta, setLineHeightDelta] = useState(() => {
-    try { return Number(localStorage.getItem('md-editor-line-height-delta')) || 0; } catch { return 0; }
+    const saved = safeGetItem('md-editor-line-height-delta');
+    return saved ? Number(saved) || 0 : 0;
   });
+
+  // Storage health — synced with the storage module singleton.
+  // When non-null a persistent notice is shown with a Retry button.
+  const [storageError, setStorageError] = useState<StorageError | null>(() => getStorageError());
+  const setStorageErrorRef = useRef(setStorageError);
+  useEffect(() => { setStorageErrorRef.current = setStorageError; }, [setStorageError]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -134,6 +138,21 @@ function App() {
   }, [previewBlocks]);
   // ── End scroll sync ──────────────────────────────────────────
 
+  // ── Storage health check on mount ──────────────────────────
+  useEffect(() => {
+    checkStorage();
+    setStorageErrorRef.current(getStorageError());
+  }, []);
+
+  // ── Persist helper that surfaces failures to the React state ─
+  // On failure, safeSetItem updates the module singleton; we mirror it
+  // into React state so the persistent notice re-renders.
+  const persist = useCallback((key: string, value: string) => {
+    if (!safeSetItem(key, value)) {
+      setStorageErrorRef.current(getStorageError());
+    }
+  }, []);
+
   // Persist markdown to localStorage (debounced 500ms)
   const latestMdRef = useRef(markdown);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -141,35 +160,29 @@ function App() {
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      try { localStorage.setItem('md-editor-content', latestMdRef.current); } catch { /* ignore */ }
+      persist('md-editor-content', latestMdRef.current);
     }, 500);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [markdown]);
 
   // Persist theme
   useEffect(() => {
-    try {
-      localStorage.setItem('md-editor-theme', theme);
-    } catch { /* ignore */ }
+    persist('md-editor-theme', theme);
   }, [theme]);
 
   // Persist custom themes
   useEffect(() => {
-    try {
-      localStorage.setItem('md-editor-custom-themes', JSON.stringify(customThemes));
-    } catch { /* ignore */ }
+    persist('md-editor-custom-themes', JSON.stringify(customThemes));
   }, [customThemes]);
 
   // Persist font set
   useEffect(() => {
-    try {
-      localStorage.setItem('md-editor-font-set', JSON.stringify(fontSet));
-    } catch { /* ignore */ }
+    persist('md-editor-font-set', JSON.stringify(fontSet));
   }, [fontSet]);
 
   // Persist split ratio
   useEffect(() => {
-    try { localStorage.setItem('md-editor-split-ratio', String(splitRatio)); } catch { /* ignore */ }
+    persist('md-editor-split-ratio', String(splitRatio));
   }, [splitRatio]);
 
   // Apply font set + deltas as CSS custom properties
@@ -190,8 +203,8 @@ function App() {
   }, [fontSet, fontSizeDelta, lineHeightDelta]);
 
   // Persist font/line deltas
-  useEffect(() => { try { localStorage.setItem('md-editor-font-size-delta', String(fontSizeDelta)); } catch { /* ignore */ } }, [fontSizeDelta]);
-  useEffect(() => { try { localStorage.setItem('md-editor-line-height-delta', String(lineHeightDelta)); } catch { /* ignore */ } }, [lineHeightDelta]);
+  useEffect(() => { persist('md-editor-font-size-delta', String(fontSizeDelta)); }, [fontSizeDelta]);
+  useEffect(() => { persist('md-editor-line-height-delta', String(lineHeightDelta)); }, [lineHeightDelta]);
 
   // Cleanup timers / RAFs on unmount
   useEffect(() => () => {
@@ -243,6 +256,25 @@ function App() {
       }, 300);
     }, 2000);
   }, []);
+
+  // ── Retry storage after a failure; re-persist current data on success ─
+  const handleRetryStorage = useCallback(() => {
+    if (retryStorage()) {
+      setStorageError(null);
+      showToast(_t('app.storage.error.retry_success'));
+      // Storage is available again — re-persist everything from React state
+      safeSetItem('md-editor-content', latestMdRef.current);
+      safeSetItem('md-editor-theme', theme);
+      safeSetItem('md-editor-custom-themes', JSON.stringify(customThemes));
+      safeSetItem('md-editor-font-set', JSON.stringify(fontSet));
+      safeSetItem('md-editor-split-ratio', String(splitRatio));
+      safeSetItem('md-editor-font-size-delta', String(fontSizeDelta));
+      safeSetItem('md-editor-line-height-delta', String(lineHeightDelta));
+    } else {
+      setStorageError(getStorageError());
+      showToast(_t('app.storage.error.retry_failed'));
+    }
+  }, [showToast, _t, latestMdRef, theme, customThemes, fontSet, splitRatio, fontSizeDelta, lineHeightDelta]);
 
   // File operations
   const handleOpenFile = useCallback(() => {
@@ -931,6 +963,23 @@ function App() {
           canRedo={canRedo}
           onOpenSettings={handleOpenSettings}
         />
+
+      {/* Persistent storage notice — appears when localStorage fails, stays
+          until the user retries successfully. Editor data is safe in
+          React state; the notice reminds the user to Download their work. */}
+      {storageError && (
+        <div className="storage-notice">
+          <span className="storage-notice-msg">
+            {_t(getStorageErrorKey())}
+          </span>
+          <button className="storage-notice-btn storage-notice-retry" onClick={handleRetryStorage}>
+            {_t('app.storage.error.retry')}
+          </button>
+          <button className="storage-notice-btn storage-notice-download" onClick={handleSaveAs}>
+            {_t('toolbar.save')}
+          </button>
+        </div>
+      )}
 
       {/* Main content */}
       <div className={`app-main view-${viewMode} flex flex-1 overflow-hidden ${isFocusMode ? 'focus-mode-active' : ''}`}>
