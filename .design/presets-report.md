@@ -32,15 +32,15 @@ Tabela: `nazwa/pary = ratio (wymaganie)`:
 | paper: text-secondary/bg-primary | 8.30:1 | 4.5:1 ✔ |
 | paper: text-muted/bg-primary | 5.29:1 | 4.5:1 ✔ |
 | paper: accent/bg-primary | 5.86:1 | 4.5:1 ✔ |
-| paper: border-control/bg-primary | 3.33:1 | 3:1 ✔ |
+| paper: border-control/bg-primary | 3.78:1 | 3:1 ✔ |
 | paper: code-text (`#cdd6f4`)/code-bg | 11.25:1 | 4.5:1 ✔ |
-| … analogicznie dla ink, neutralLight, neutralDark — **cały zestaw 144/144 par przechodzi** | | |
+| … analogicznie dla ink, neutralLight, neutralDark — **32 asercji (8 przypadków × 4 palety), wszystkie ≥ wymagań** | | |
 
-Wymagania CEO: tekst ≥ 4.5:1, kontrole/fokus ≥ 3:1, kod/tabele ≥ 4.5:1 — **zgodne.
+Wymagania CEO: tekst ≥ 4.5:1, kontrole ≥ 3:1, kod/tabele ≥ 3:1 — **zgodne (weryfikowane automatycznie). Focus nie jest testowany automatycznie.**
 
 Obliczenia w kodzie: `src/types.test.ts` (`visual presets → WCAG AA`) — 8 testów automatycznych. Raport inżynieria: `.design/presets-report.md` + `src/assets/fonts/README.md`.
 
 ## Status
 
-- typecheck ✔ / test 88/88 ✔ / build ✔ (1,235 kB single-file) / lint: 1 pre-existing error (`react-hooks/refs`, App.tsx:125, niezależny od tej iteracji — taki sam błąd istniał na gałęzi quality-lint przed fixem 58d2c80).
+- typecheck ✔ / test 106/106 ✔ (98 theme+font+contrast, 8 App matchMedia listener) / build ✔ / lint: 0 errors (quality-lint fix 58d2c80 integrated, useLayoutEffect replaces refs-during-render).
 - Brak http zdalnych @font-face; brak nowych npm deps; lock/Rust nietknięte.

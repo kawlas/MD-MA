@@ -18,6 +18,7 @@ import {
   getDropFileType,
   getEffectiveTheme,
   THEMES,
+  THEME_LIST,
   FONT_SETS,
 } from "./types";
 
@@ -477,7 +478,7 @@ describe("new palettes — WCAG AA", () => {
     expect(contrastRatio(vars["--text-muted"], bg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(NEW_PALETTE_KEYS)("controls / focus / code >= 3:1 on %s", (key) => {
+  it.each(NEW_PALETTE_KEYS)("controls / code >= 3:1 on %s", (key) => {
     const vars = THEMES[key];
     const bg = vars["--bg-primary"];
     const bgSecondary = vars["--bg-secondary"];
@@ -584,5 +585,40 @@ describe("getEffectiveTheme", () => {
   it("returns explicit dark theme regardless of systemPrefersDark", () => {
     expect(getEffectiveTheme("navy", false)).toBe("navy");
     expect(getEffectiveTheme("githubDark", false)).toBe("githubDark");
+  });
+});
+
+describe("THEME_LIST / F5 cycle", () => {
+  it("THEME_LIST contains all keys of THEMES (single source of truth)", () => {
+    expect(THEME_LIST).toEqual(Object.keys(THEMES));
+  });
+
+  it("THEME_LIST excludes 'system' preference (19 themes, not 20)", () => {
+    expect(THEME_LIST).not.toContain("system");
+    expect(THEME_LIST).toHaveLength(19);
+  });
+
+  it("F5 cycle includes all 19 themes plus 'system' preference", () => {
+    const builtin = ["system", ...THEME_LIST];
+    expect(builtin).toHaveLength(20);
+    expect(builtin[0]).toBe("system");
+  });
+
+  it("F5 cycle wraps from last theme back to 'system'", () => {
+    const builtin = ["system", ...THEME_LIST];
+    const lastIdx = builtin.length - 1;
+    expect(builtin[(lastIdx + 1) % builtin.length]).toBe("system");
+  });
+
+  it("F5 cycle includes all 4 new palettes", () => {
+    const builtin = ["system", ...THEME_LIST];
+    expect(builtin).toEqual(
+      expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]),
+    );
+  });
+
+  it("THEME_LIST preserves THEMES insertion order", () => {
+    expect(THEME_LIST[0]).toBe("snow");
+    expect(THEME_LIST[18]).toBe("neutralDark");
   });
 });

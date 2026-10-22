@@ -15,8 +15,9 @@ import {
   type ThemeVars,
   type FontSet,
   type Block,
-  THEMES,
-  FONT_SETS,
+   THEMES,
+   THEME_LIST,
+   FONT_SETS,
   SAMPLE_MARKDOWN,
   getEffectiveTheme,
   extractToc,
@@ -876,7 +877,7 @@ function App() {
       if (mod && !e.shiftKey && key === 'k') { e.preventDefault(); setShowCommandPalette(p => !p); return; }
       if (mod && e.shiftKey && key === 'c') { e.preventDefault(); handleCopyRendered(); return; }
       if (key === 'f5') { e.preventDefault(); setTheme(prev => {
-        const builtin = ['system','snow','githubDark','nord','tokyoNight','solarizedLight','solarizedDark','ivory','navy','midnight','slate','ocean','storm','twilight','onyx','sepia'];
+        const builtin = ['system', ...THEME_LIST];
         const idx = builtin.indexOf(prev);
         return builtin[(idx + 1) % builtin.length];
       }); return; }

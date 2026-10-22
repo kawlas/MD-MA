@@ -397,7 +397,7 @@ export const THEMES: Record<EffectiveTheme, ThemeVars> = {
 
   /* === Nowe palety (dodane 2026-10-22) ===
      Każdy z 4 wariantów jest mierzony: tekst >= 4.5:1, obramowanie kontrolki >= 3:1.
-     Dowód: .design/presets-report.md + src/palette-contrast.test.ts */
+     Dowód: .design/presets-report.md + src/types.test.ts */
   paper: {
     '--bg-primary': '#f7f4ec',
     '--bg-secondary': '#eee9dd',
@@ -507,6 +507,9 @@ export const THEMES: Record<EffectiveTheme, ThemeVars> = {
     '--callout-caution-border': '#cf6a5f',
   },
 };
+
+/** Single source of truth for all built-in theme names (excludes 'system' preference). */
+export const THEME_LIST: EffectiveTheme[] = Object.keys(THEMES) as EffectiveTheme[];
 
 /** Czytelne nazwy motywów (camelCase -> "Neutral Light"). */
 export const THEME_LABELS: Record<string, string> = {

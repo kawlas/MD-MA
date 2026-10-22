@@ -52,7 +52,7 @@ All read on mount and persisted via `useEffect`.
 | `Cmd/Ctrl+N` | New file |
 | `Cmd/Ctrl+Shift+C` | Copy rendered as rich text |
 | `Cmd/Ctrl+Shift+P` | Export PDF (triggers `window.print()`) |
-| `F5` | Cycle built-in theme (list includes 4 new refined palettes after `sepia`) |
+| `F5` | Cycle built-in theme (19 themes + `system` preference, cycled via `THEME_LIST`) |
 
 ## macOS binary (Tauri)
 
