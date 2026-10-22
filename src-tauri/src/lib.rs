@@ -29,6 +29,40 @@ struct CurrentDoc {
     path: std::sync::Mutex<Option<PathBuf>>,
 }
 
+/// Shared between the `save_file` command and tests so both exercise
+/// the exact same guard logic.
+fn current_doc_path(state: &CurrentDoc) -> Result<PathBuf, String> {
+    state
+        .path
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "No document open — use Save As".to_string())
+}
+
+/// Write `content` to the current document path (from `CurrentDoc` state).
+/// Shared between the `save_file` command and tests.
+fn save_to_current_doc(state: &CurrentDoc, content: &str) -> Result<SaveResponse, String> {
+    let target = current_doc_path(state)?;
+    atomic_write(&target, content).map_err(|e| format!("Failed to save file: {}", e))?;
+    let filename = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "document.md".to_string());
+    Ok(SaveResponse {
+        path: target.to_string_lossy().to_string(),
+        filename,
+        content: None,
+    })
+}
+
+/// Clear the current document path. Called by `clear_current_doc` command
+/// and directly in tests to simulate New/import/drop identity reset.
+fn reset_current_doc(state: &CurrentDoc) {
+    *state.path.lock().unwrap() = None;
+}
+
 /// Response from `open_file` / `save_file` / `save_file_as`.
 #[derive(Serialize, Deserialize)]
 #[allow(dead_code)]
@@ -120,11 +154,19 @@ fn atomic_write(target: &Path, content: &str) -> std::io::Result<()> {
         file.sync_all()?;
         drop(file);
 
-        // Restore target's permissions on the temp before rename
+        // Restore target's permissions on the temp before rename.
+        // Errors here are propagated — a failure to restore permissions
+        // must NOT silently result in a downgraded file.
         #[cfg(unix)]
         if let Some(mode) = existing_mode {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(mode));
+            std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(mode))
+                .map_err(|e| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::PermissionDenied,
+                        format!("Failed to restore permissions on temp file: {}", e),
+                    )
+                })?;
         }
 
         // Atomic rename (same filesystem / same directory)
@@ -266,15 +308,14 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn test_save_file_does_not_overwrite_after_clear() {
+    fn test_save_file_does_not_overwrite_after_identity_clear() {
         // Proves the core safety invariant: after the document identity is
         // cleared (simulating New/import/drop), save_file must not write to
         // the previously authorized path.
         //
-        // We simulate this at the atomic_write level: a file with content A
-        // is on disk; we clear the "current doc" binding (set path to None),
-        // then attempt a save_file-equivalent. Since the path is None,
-        // save_file would reject — and A's bytes must be unchanged.
+        // Uses the REAL CurrentDoc state and save_to_current_doc helper
+        // (the same path taken by the #[tauri::command] save_file), not a
+        // local Option variable.
 
         let dir = std::env::temp_dir();
         let file_a = dir.join("md-ma-test-save-no-overwrite.txt");
@@ -285,16 +326,34 @@ mod tests {
         let before = std::fs::read_to_string(&file_a).unwrap();
         assert_eq!(before, "# Document A");
 
-        // Simulate: backend CurrentDoc.path is None (cleared by New/import/drop)
-        let current_doc_path: Option<PathBuf> = None;
+        // Author A's path in real CurrentDoc state (as open_file would)
+        let state = CurrentDoc::default();
+        {
+            let mut guard = state.path.lock().unwrap();
+            *guard = Some(file_a.clone());
+        }
 
-        // save_file logic: if path is None, return error (don't write)
-        let save_result = current_doc_path.ok_or_else(|| "No document open — use Save As".to_string());
-        assert!(save_result.is_err(), "save_file must reject when path is None");
+        // Simulate: user does New/import/drop -> clear_current_doc resets the path
+        reset_current_doc(&state);
+        // Confirm state is cleared
+        {
+            let guard = state.path.lock().unwrap();
+            assert!(guard.is_none(), "CurrentDoc.path must be None after reset");
+        }
 
-        // Critical: file A's bytes must be unchanged
+        // Attempt save_file via the real shared helper — must REJECT
+        let save_result = save_to_current_doc(&state, "# Document B (malicious overwrite attempt)");
+        assert!(
+            save_result.is_err(),
+            "save_file must reject when CurrentDoc.path is None"
+        );
+
+        // Critical: file A's bytes must be unchanged — no overwrite occurred
         let after = std::fs::read_to_string(&file_a).unwrap();
-        assert_eq!(after, "# Document A", "File A must not be written to after identity clear");
+        assert_eq!(
+            after, "# Document A",
+            "File A must not be written to after identity clear"
+        );
 
         let _ = std::fs::remove_file(&file_a);
     }
@@ -359,27 +418,7 @@ fn save_file(app: tauri::AppHandle, content: String) -> Result<SaveResponse, Str
     let state = app
         .try_state::<CurrentDoc>()
         .ok_or_else(|| "No state available".to_string())?;
-
-    let target = state
-        .path
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or_else(|| "No document open — use Save As".to_string())?;
-
-    atomic_write(&target, &content).map_err(|e| format!("Failed to save file: {}", e))?;
-
-    let filename = target
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "document.md".to_string());
-
-    Ok(SaveResponse {
-        path: target.to_string_lossy().to_string(),
-        filename,
-        content: None,
-    })
+    save_to_current_doc(&state, &content)
 }
 
 /// Show a native save dialog, write to the chosen path, and store it as
@@ -441,7 +480,7 @@ async fn save_file_as(app: tauri::AppHandle, content: String) -> Result<SaveResp
 #[tauri::command]
 fn clear_current_doc(app: tauri::AppHandle) {
     if let Some(state) = app.try_state::<CurrentDoc>() {
-        *state.path.lock().unwrap() = None;
+        reset_current_doc(&state);
     }
 }
 
