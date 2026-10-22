@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, act, waitFor, fireEvent } from "@testing-library/react";
+import { render, act, waitFor, fireEvent, cleanup } from "@testing-library/react";
 
 const matchMediaAPI = vi.hoisted(() => {
   const state = {
@@ -66,6 +66,14 @@ vi.mock("@tauri-apps/api/window", () => ({
   })),
 }));
 
+// Mock Tauri invoke for native file I/O tests. In the test environment
+// (jsdom), __TAURI__ is not set, so the App falls back to web behavior.
+// These tests stub __TAURI__ and invoke to simulate the Tauri context.
+const tauriInvokeMock = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (...args: unknown[]) => tauriInvokeMock(...args),
+}));
+
 vi.mock("@/components/Toolbar", () => ({ default: () => null }));
 vi.mock("@/components/CodeEditor", () => ({ default: () => null }));
 vi.mock("@/components/Preview", () => ({ default: () => null }));
@@ -99,11 +107,21 @@ beforeEach(() => {
   matchMediaAPI.setMatches(false);
   matchMediaAPI.clearListeners();
   vi.stubGlobal("matchMedia", () => matchMediaAPI.mq as unknown as MediaQueryList);
+  // Reset Tauri invoke mock and runtime between tests
+  tauriInvokeMock.mockReset();
+  tauriInvokeMock.mockImplementation(() => Promise.resolve());
+  delete (window as unknown as Record<string, unknown>).__TAURI__;
 });
 
 afterEach(() => {
+  // Must run FIRST: unmount all RTL-rendered components to remove
+  // window-level event listeners before we tear down globals.
+  // Without globals:true in vitest config, auto-cleanup is NOT registered.
+  cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  delete (window as unknown as Record<string, unknown>).__TAURI__;
+  tauriInvokeMock.mockReset();
 });
 
 describe("App: reactive system theme via matchMedia listener", () => {
@@ -295,5 +313,238 @@ describe("App: storage recovery", () => {
     expect(container.querySelector(".app-main")).not.toBeNull();
 
     unmount();
+  });
+});
+
+
+
+describe("App: native file I/O document identity", () => {
+  // Regression test for stale document identity:
+  // After native Open A -> New (discard) -> Cmd+S, the save must NOT write
+  // to A's path. The frontend tracks nativeDocPath; after New it is null,
+  // so handleSave skips save_file and goes straight to save_file_as.
+
+  it("nativeOpen A -> New -> discard -> Cmd+S calls save_file_as, NOT save_file to A", async () => {
+    Object.defineProperty(window, "__TAURI__", { value: true, configurable: true });
+
+    let saveFileCalled = false;
+
+    tauriInvokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "open_file") {
+        return Promise.resolve({
+          path: "/tmp/doc-a.md",
+          filename: "doc-a.md",
+          content: "# Document A\n",
+        });
+      }
+      if (cmd === "clear_current_doc") {
+        return Promise.resolve();
+      }
+      if (cmd === "save_file") {
+        saveFileCalled = true;
+        return Promise.resolve({ path: "/tmp/doc-a.md", filename: "doc-a.md", content: null });
+      }
+      if (cmd === "save_file_as") {
+        return Promise.resolve({ path: "/tmp/new-doc.md", filename: "new-doc.md", content: null });
+      }
+      return Promise.resolve();
+    });
+
+    // Start with empty localStorage so mount doesn't load stale content
+    localStorageMock.store.set("md-editor-content", "");
+
+    const { container, unmount } = render(<App />);
+    await waitFor(() => expect(container.querySelector(".app-main")).not.toBeNull());
+
+    // Step 1: Cmd+O — native open file A
+    await act(async () => {
+      const openEvent = new KeyboardEvent("keydown", { key: "o", metaKey: true, bubbles: true });
+      window.dispatchEvent(openEvent);
+    });
+
+    // Wait for open_file to resolve and set markdown to Document A
+    await waitFor(() => {
+      expect(tauriInvokeMock).toHaveBeenCalledWith("open_file");
+    });
+
+    // Step 2: Cmd+N — markdown is now "# Document A" (non-empty), so
+    // handleNewFile shows the discard dialog
+    await act(async () => {
+      const newEvent = new KeyboardEvent("keydown", { key: "n", metaKey: true, bubbles: true });
+      window.dispatchEvent(newEvent);
+    });
+
+    // The discard dialog should appear (fixed inset-0 z-50)
+    const dialog = await waitFor(() => container.querySelector(".fixed.inset-0.z-50"));
+    expect(dialog).not.toBeNull();
+
+    // Step 3: Click "Discard" button
+    const buttons = dialog!.querySelectorAll("button");
+    const discardBtn = Array.from(buttons).find((b) => b.textContent === "app.unsaved.discard");
+    expect(discardBtn).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(discardBtn!);
+    });
+
+    // Verify clear_current_doc was called (document identity invalidated)
+    await waitFor(() => {
+      expect(tauriInvokeMock).toHaveBeenCalledWith("clear_current_doc");
+    });
+
+    // Wait for React to re-render with nativeDocPath=null so handleSave
+    // has the updated dependency and the keyboard handler is re-registered
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Step 4: Cmd+S — nativeDocPath is null after New, so handleSave
+    // should skip save_file entirely and call save_file_as
+    await act(async () => {
+      const saveEvent = new KeyboardEvent("keydown", { key: "s", metaKey: true, bubbles: true });
+      window.dispatchEvent(saveEvent);
+    });
+
+    // save_file_as must be called (fallback), and save_file must NOT
+    await waitFor(() => {
+      const calls = tauriInvokeMock.mock.calls.map((c: unknown[]) => c[0]);
+      expect(calls).toContain("save_file_as");
+    });
+    expect(saveFileCalled).toBe(false);
+
+    unmount();
+    delete (window as unknown as Record<string, unknown>).__TAURI__;
+  });
+
+  it("drop text file clears nativeDocPath so Save As is used, save_file not called", async () => {
+    Object.defineProperty(window, "__TAURI__", { value: true, configurable: true });
+
+    let saveFileCalled = false;
+
+    tauriInvokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "open_file") {
+        return Promise.resolve({
+          path: "/tmp/doc-a.md",
+          filename: "doc-a.md",
+          content: "# Document A",
+        });
+      }
+      if (cmd === "clear_current_doc") {
+        return Promise.resolve();
+      }
+      if (cmd === "save_file") {
+        saveFileCalled = true;
+        return Promise.resolve({ path: "/tmp/doc-a.md", filename: "doc-a.md", content: null });
+      }
+      if (cmd === "save_file_as") {
+        return Promise.resolve({ path: "/tmp/dropped.md", filename: "dropped.md", content: null });
+      }
+      return Promise.resolve();
+    });
+
+    localStorageMock.store.set("md-editor-content", "");
+
+    const { container, unmount } = render(<App />);
+    await waitFor(() => expect(container.querySelector(".app-main")).not.toBeNull());
+
+    // Native open A first
+    await act(async () => {
+      const openEvent = new KeyboardEvent("keydown", { key: "o", metaKey: true, bubbles: true });
+      window.dispatchEvent(openEvent);
+    });
+    await waitFor(() => {
+      expect(tauriInvokeMock).toHaveBeenCalledWith("open_file");
+    });
+
+    // Drop a text file on the app's outer div
+    const file = new File(["# dropped content"], "dropped.md", { type: "text/markdown" });
+
+    await act(async () => {
+      const dropTarget = container.querySelector(".flex.flex-col.h-screen.w-screen.overflow-hidden");
+      const dt = {
+        files: [file],
+        items: [{ kind: "file", type: "text/markdown", getAsString: () => {} }],
+        types: ["Files"],
+        getData: () => "",
+        setDataData: () => {},
+        clearData: () => {},
+        effectAllowed: "copy",
+      };
+      const dropEvent = new MouseEvent("drop", { bubbles: true, cancelable: true });
+      Object.defineProperty(dropEvent, "dataTransfer", { value: dt, configurable: true });
+      Object.defineProperty(dropEvent, "defaultPrevented", { value: false, configurable: true });
+      dropTarget?.dispatchEvent(dropEvent);
+    });
+
+    await waitFor(() => {
+      expect(tauriInvokeMock).toHaveBeenCalledWith("clear_current_doc");
+    });
+
+    // Wait for React to re-render with nativeDocPath = null
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Cmd+S should fall back to save_file_as because nativeDocPath was cleared
+    await act(async () => {
+      const saveEvent = new KeyboardEvent("keydown", { key: "s", metaKey: true, bubbles: true });
+      window.dispatchEvent(saveEvent);
+    });
+
+    await waitFor(() => {
+      const calls = tauriInvokeMock.mock.calls.map((c: unknown[]) => c[0]);
+      expect(calls).toContain("save_file_as");
+    });
+    expect(saveFileCalled).toBe(false);
+
+    unmount();
+    delete (window as unknown as Record<string, unknown>).__TAURI__;
+  });
+
+  it("save_file_as sets nativeDocPath so subsequent Cmd+S writes via save_file", async () => {
+    Object.defineProperty(window, "__TAURI__", { value: true, configurable: true });
+
+    let saveFileCalled = false;
+    let saveFileAsCalled = false;
+
+    tauriInvokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "save_file") {
+        saveFileCalled = true;
+        return Promise.resolve({ path: "/tmp/new-doc.md", filename: "new-doc.md", content: null });
+      }
+      if (cmd === "save_file_as") {
+        saveFileAsCalled = true;
+        return Promise.resolve({ path: "/tmp/new-doc.md", filename: "new-doc.md", content: null });
+      }
+      if (cmd === "clear_current_doc") return Promise.resolve();
+      return Promise.resolve();
+    });
+
+    localStorageMock.store.set("md-editor-content", "# new");
+
+    const { container, unmount } = render(<App />);
+    await waitFor(() => expect(container.querySelector(".app-main")).not.toBeNull());
+
+    // First Cmd+S — nativeDocPath is null, should go to save_file_as
+    await act(async () => {
+      const saveEvent = new KeyboardEvent("keydown", { key: "s", metaKey: true, bubbles: true });
+      window.dispatchEvent(saveEvent);
+    });
+
+    await waitFor(() => {
+      expect(saveFileAsCalled).toBe(true);
+    });
+
+    // Second Cmd+S — nativeDocPath is now set from save_file_as response
+    await act(async () => {
+      const saveEvent = new KeyboardEvent("keydown", { key: "s", metaKey: true, bubbles: true });
+      window.dispatchEvent(saveEvent);
+    });
+
+    await waitFor(() => {
+      expect(saveFileCalled).toBe(true);
+    });
+
+    unmount();
+    delete (window as unknown as Record<string, unknown>).__TAURI__;
   });
 });

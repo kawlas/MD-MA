@@ -93,6 +93,10 @@ function App() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // Frontend-side document identity binding: the authorized native path for
+  // the current document. Reset on New/file-input/drop so handleSave never
+  // writes to a stale path even if clear_current_doc races or fails.
+  const [nativeDocPath, setNativeDocPath] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
   const [pendingAction, setPendingAction] = useState<"new" | null>(null);
@@ -181,27 +185,27 @@ function App() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [markdown]);
+  }, [markdown, persist]);
 
   // Persist theme
   useEffect(() => {
     persist("md-editor-theme", theme);
-  }, [theme]);
+  }, [theme, persist]);
 
   // Persist custom themes
   useEffect(() => {
     persist("md-editor-custom-themes", JSON.stringify(customThemes));
-  }, [customThemes]);
+  }, [customThemes, persist]);
 
   // Persist font set
   useEffect(() => {
     persist("md-editor-font-set", JSON.stringify(fontSet));
-  }, [fontSet]);
+  }, [fontSet, persist]);
 
   // Persist split ratio
   useEffect(() => {
     persist("md-editor-split-ratio", String(splitRatio));
-  }, [splitRatio]);
+  }, [splitRatio, persist]);
 
   // Apply font set + deltas as CSS custom properties
   useEffect(() => {
@@ -223,10 +227,10 @@ function App() {
   // Persist font/line deltas
   useEffect(() => {
     persist("md-editor-font-size-delta", String(fontSizeDelta));
-  }, [fontSizeDelta]);
+  }, [fontSizeDelta, persist]);
   useEffect(() => {
     persist("md-editor-line-height-delta", String(lineHeightDelta));
-  }, [lineHeightDelta]);
+  }, [lineHeightDelta, persist]);
 
   // Cleanup timers / RAFs on unmount
   useEffect(
@@ -307,6 +311,7 @@ function App() {
       try {
         const result = await invoke<{ path: string; filename: string; content: string | null }>("open_file");
         const content = result.content ?? "";
+        setNativeDocPath(result.path); // Authorize this path for subsequent save_file
         setMarkdown(content);
         setPreviewMarkdown(content);
         setFileName(result.filename);
@@ -332,6 +337,12 @@ function App() {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const content = ev.target?.result as string;
+        // Invalidate backend document identity — this is a replacement document
+        // imported via web file input, not a native-dialog open.
+        if (typeof window !== "undefined" && "__TAURI__" in window) {
+          void invoke("clear_current_doc").catch(() => {});
+        }
+        setNativeDocPath(null);
         setMarkdown(content);
         setPreviewMarkdown(content);
         setFileName(file.name);
@@ -341,17 +352,21 @@ function App() {
       reader.readAsText(file);
       e.target.value = "";
     },
-    [showToast],
-  );
+    [showToast, _t]);
 
   const doNewFile = useCallback(() => {
-    setMarkdown("");
+    // Invalidate any backend-authorized document path — a new document
+    // must not write back to the previously opened file.
+    if (typeof window !== "undefined" && "__TAURI__" in window) {
+      void invoke("clear_current_doc").catch(() => {});
+    }
+    setNativeDocPath(null);
     setPreviewMarkdown("");
     setFileName(null);
     setIsModified(false);
     setPendingAction(null);
     showToast(_t("app.toast.new_document"));
-  }, [showToast]);
+  }, [showToast, _t]);
 
   const handleNewFile = useCallback(() => {
     if (isModified || markdown.length > 0) {
@@ -369,6 +384,7 @@ function App() {
         const result = await invoke<{ path: string; filename: string; content: string | null }>("save_file_as", {
           content: markdown,
         });
+        setNativeDocPath(result.path); // Authorize this path for subsequent save_file
         setFileName(result.filename);
         setIsModified(false);
         showToast(`${_t("app.toast.saved")}: ${result.filename}`);
@@ -399,9 +415,10 @@ function App() {
   }, [markdown, fileName, isTxt, stripMarkdown, showToast, _t]);
 
   // Save to the current (authorized) document path. If none is open, fall
-  // back to Save As.
+  // back to Save As. The nativeDocPath binding ensures we never write to a
+  // stale backend path after New/import/drop — even if clear_current_doc races.
   const handleSave = useCallback(async (): Promise<boolean> => {
-    if (typeof window !== "undefined" && "__TAURI__" in window) {
+    if (typeof window !== "undefined" && "__TAURI__" in window && nativeDocPath) {
       try {
         const result = await invoke<{ path: string; filename: string; content: string | null }>("save_file", {
           content: markdown,
@@ -418,7 +435,7 @@ function App() {
       // Web: no backend path, always fall back to download
       return handleSaveAs();
     }
-  }, [markdown, handleSaveAs, showToast, _t]);
+  }, [markdown, nativeDocPath, handleSaveAs, showToast, _t]);
 
   const handleConfirmDiscard = useCallback(() => {
     if (pendingAction === "new") doNewFile();
@@ -646,6 +663,11 @@ function App() {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const content = ev.target?.result as string;
+        // Invalidate backend document identity — dropped file replaces the document
+        if (typeof window !== "undefined" && "__TAURI__" in window) {
+          void invoke("clear_current_doc").catch(() => {});
+        }
+        setNativeDocPath(null);
         setMarkdown(content);
         setPreviewMarkdown(content);
         setFileName(file.name);
@@ -654,7 +676,7 @@ function App() {
       };
       reader.readAsText(file);
     },
-    [markdown, showToast],
+    [markdown, showToast, _t],
   );
 
   // ── Scroll sync logic ────────────────────────────────────────
