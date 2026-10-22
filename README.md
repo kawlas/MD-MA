@@ -57,10 +57,12 @@ Download a release DMG from [GitHub Releases](https://github.com/kawlas/MD-MA/re
 1. `MD.MA.QA_0.1.0_aarch64.dmg` → open, then drag **MD MA** to `Applications`.
 2. Launch from `Launchpad` / `Applications`, or run directly from the mounted DMG.
 
-Pre-built QA DMGs are in [`artifacts/`](artifacts/). Verify the checksum:
+The release DMG + `SHA256SUMS.txt` are kept in [`instalka/`](instalka/)
+(`instalka/` is gitignored except for `SHA256SUMS.txt`; the DMG itself is a
+GitHub Release asset, not a committed binary). Verify the checksum:
 
 ```sh
-cd artifacts/v0.1.0-rc.1
+cd instalka
 shasum -c SHA256SUMS.txt
 ```
 

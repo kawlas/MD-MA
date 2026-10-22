@@ -13,15 +13,17 @@
 
 **Source SHA:** `7536256eae9b17be333fef67ddc6f78d202ba3ec` (public prerelease on GitHub)
 
-The rc1 DMG + SHA256 are preserved at `artifacts/v0.1.0-rc.1/`. This source tag
-is **superseded** by `kawlas/final-closure` after review passes; the historical
-artifact is kept for downgrade/revert.
+The rc1 DMG + SHA256 were preserved at `artifacts/v0.1.0-rc.1/`. This source tag
+is **superseded** by `kawlas/final-closure` after review passes; the rc1 local
+binary is no longer shipped in this checkout (removed in favor of the single
+rc2 installer in `instalka/`). Its SHA256 is recorded below for historical
+reference only.
 
-### rc1 artifact
+### rc1 artifact (historical)
 
 | File | Path | SHA256 |
 |---|---|---|
-| DMG | `artifacts/v0.1.0-rc.1/MD.MA.QA_0.1.0_aarch64.dmg` | `5453b8ea06cabb6925309069a09eeaaf5587689e7e6c19b1d5cb6c6237c633c8` |
+| DMG | `artifacts/v0.1.0-rc.1/MD.MA.QA_0.1.0_aarch64.dmg` (removed) | `5453b8ea06cabb6925309069a09eeaaf5587689e7e6c19b1d5cb6c6237c633c8` |
 
 ### rc1 validation evidence
 
@@ -43,7 +45,7 @@ artifact is kept for downgrade/revert.
 
 | File | Path | SHA256 | Size |
 |---|---|---|---|
-| DMG | `artifacts/v0.1.0-rc.2/MD.MA.QA_0.1.0_aarch64.dmg` | `e643173a60b0916fc015e6da9d0653349b5854e51ed3ce3a32872fdb90889dc4` | 3.82 MB |
+| DMG | `instalka/MD.MA.QA_0.1.0_aarch64.dmg` | `e643173a60b0916fc015e6da9d0653349b5854e51ed3ce3a32872fdb90889dc4` | 3.82 MB |
 
 ### rc2 verification
 
