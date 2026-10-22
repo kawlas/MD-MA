@@ -37,21 +37,42 @@ artifact is kept for downgrade/revert.
 | Production config | `src-tauri/tauri.conf.json` untouched: `com.mdeditor.md-editor` / "MD MA" / `.md` associations intact |
 | Native GUI open/save | **UNVERIFIED** — macOS Accessibility permission denied |
 
+## rc2 candidate (kawlas/final-closure)
+
+**Source SHA:** `87724dc` — built and verified.
+
+| File | Path | SHA256 | Size |
+|---|---|---|---|
+| DMG | `artifacts/v0.1.0-rc.2/MD.MA.QA_0.1.0_aarch64.dmg` | `e643173a60b0916fc015e6da9d0653349b5854e51ed3ce3a32872fdb90889dc4` | 3.82 MB |
+
+### rc2 verification
+
+| Item | Evidence |
+|---|---|
+| Build | `cargo tauri build --config .cache/qa-config.json`, `APPLE_SIGNING_IDENTITY='-'` |
+| `codesign --verify --deep --strict` (app inside DMG) | valid (exit 0) |
+| Bundle id | `com.mdeditor.md-ma-qa` (ad‑hoc, no TeamIdentifier) |
+| File associations | none (no `.md` claim) |
+| `hdiutil verify` (DMG) | VALID (UDZO / zlib, CRC32) |
+| SHA256 | `e643173a60b0916fc015e6da9d0653349b5854e51ed3ce3a32872fdb90889dc4` |
+| Frontend gate | `tsc --noEmit` clean; ESLint 0 errors (19 warnings); Vitest 150/150 |
+| Production config | `src-tauri/tauri.conf.json` untouched (`com.mdeditor.md-editor` / "MD MA" / `.md` associations) |
+| Native GUI open/save | **UNVERIFIED** — macOS Accessibility permission denied |
+
 ## Closure branch kawlas/final-closure
 
-**Source SHA (frozen):** `9b0693ecce37148f2b70c9ef9a8e6a71a9be447d`
+**Source SHA (frozen):** `87724dc`
 
-### Change
+### Changes
 
 - **HIGH fix:** `doNewFile` now clears both `markdown` and `previewMarkdown`
   state. Previously only the preview was cleared, leaving stale editor content
   visible after New File.
 - **AGENTS.md:** corrected stale facts (component list, localStorage keys,
   shortcut descriptions, git remote).
-
-## Next release (rc2)
-
-After reviewer approval of the final-closure branch, produce rc2:
+- **Docs:** English README corrections, known limits, user guide, development,
+  release notes. Corrected theme count (19 built-in + system = 20), font count
+  (12), raw HTML handling claim, SAMPLE_MARKDOWN theme count.
 
 ```sh
 export CARGO_TARGET_DIR="$PWD/.cache/cargo"

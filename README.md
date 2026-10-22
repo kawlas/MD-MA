@@ -52,7 +52,7 @@ splitting at runtime.
 
 ### macOS app
 
-Download the release DMG and open it:
+Download a release DMG from [GitHub Releases](https://github.com/kawlas/MD-MA/releases) and open it:
 
 1. `MD.MA.QA_0.1.0_aarch64.dmg` → open, then drag **MD MA** to `Applications`.
 2. Launch from `Launchpad` / `Applications`, or run directly from the mounted DMG.
