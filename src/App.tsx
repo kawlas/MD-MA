@@ -1154,7 +1154,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleSaveAs, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf, handleUndo, handleRedo]);
+  }, [handleSave, handleSaveAs, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf, handleUndo, handleRedo]);
 
   return (
     <div
