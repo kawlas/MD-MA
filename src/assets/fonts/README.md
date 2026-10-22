@@ -30,4 +30,4 @@ Każdy kroj ma własny plik OFL.txt w `src/assets/fonts/licenses/`. OFL jest lic
 
 ## Rozmiar
 
-Suma subsetowanych WOFF2: ok. 425 KB surowych (~582 KB base64). Ostateczny artefakt: `dist/index.html` ~1,23 MB (build produkcyjny, ~1,05 s). Akceptowalny kompromis wydania zdecydowany przez radę (nie usuwamy kursyw, nie wyrzucamy fontów).
+Suma subsetowanych WOFF2: ok. 549 KB surowych (~732 KB base64), w tym JetBrains Mono italic (114 KB, variable wght 400–700). Ostateczny artefakt: `dist/index.html` ~1,3 MB (build produkcyjny). Akceptowalny kompromis wydania zdecydowany przez radę (nie usuwamy kursyw, nie wyrzucamy fontów).
