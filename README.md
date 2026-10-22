@@ -43,14 +43,21 @@ The bundle lands at `src-tauri/target/release/bundle/dmg/`.
 ## Features
 
 - **3 view modes**: Code, Preview, Split (scroll-synced)
-- **4 built-in themes**: System, Sepia, Nord, Solarized
-- **Custom themes**: add via the toolbar gear icon
-- **File ops**: open `.md`/`.txt`, drag-and-drop, download
-- **Export**: download as `.md`, copy as rich text, export PDF
-- **Syntax highlighting**: 20+ languages via highlight.js
-- **GFM**: tables, task lists, strikethrough, GitHub callouts
-- **Table of Contents**: collapsible sidebar with heading nav
-- **Persistence**: content and theme saved to `localStorage`
+- **16 built-in themes**: Snow, Ivory, Navy, Midnight, Slate, Ocean, Storm, Twilight, Onyx, Sepia, GitHub Dark, Nord, Tokyo Night, Solarized Light, Solarized Dark (cycle with `F5`)
+- **Custom themes**: add JSON via toolbar gear icon
+- **8 font sets**: System, Inter+JetBrains, New York, SF Rounded, Helvetica Neue, Mono, Atkinson, IBM Plex
+- **File ops**: open `.md`/`.txt`, drag-and-drop (text & images), download
+- **Export**: download as `.md`/`.txt`, copy as rich text (HTML clipboard), export PDF (print)
+- **Undo/Redo**: 200-level history stack
+- **i18n**: English & Polish (auto-detected)
+- **Syntax highlighting**: 20+ languages via highlight.js (Catppuccin Mocha theme)
+- **GFM**: tables, task lists, strikethrough, GitHub callouts, auto-link
+- **Table of Contents**: collapsible sidebar with heading nav, scroll-synced
+- **Focus mode**: clean writing environment, toolbar hidden
+- **Command palette**: `Cmd+K` to search/filter commands
+- **Settings panel**: floating panel (no overlay) — theme swatches, font selection, density controls, language
+- **Scroll sync**: block-based bidirectional sync between editor and preview
+- **Persistence**: content, theme, custom themes, font set, split ratio saved to `localStorage`
 
 ## Stack
 

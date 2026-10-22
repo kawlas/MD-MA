@@ -203,6 +203,26 @@ Wszystkie zmiany wg iterracji.
 
 ---
 
+## Iteracja 9 — Floating settings panel + Scroll sync refactor
+
+**Co zrobiono:**
+
+1. **SettingsDialog — floating panel**
+   - Usunięto ciemny overlay (`rgba(0,0,0,0.5)`) i pozycjonowanie `fixed inset-0`
+   - Panel unoszący się w prawym górnym rogu (`top: 50, right: 12, width: 400`)
+   - Zmiana motywu widoczna natychmiast — panel nie blokuje widoku aplikacji
+
+2. **Scroll sync — refaktoryzacja (App.tsx)**
+   - Zastąpiono 2 flagi suppression (`editorScrollSuppressed` + `previewScrollSuppressed`) jednym timestamp lockiem (`scrollLockUntilRef`, 50ms mutex)
+   - Zmergowano 2 RAF refy (`editorScrollRafRef` + `previewScrollRafRef`) w jeden (`scrollRafRef`)
+   - Zmergowano 2 ref proxy (`editorScrollRef` + `previewScrollRef`) w jeden (`syncScrollRef`)
+   - Zmergowano 2 handlery w jedną funkcję `syncScroll(source: 'editor' | 'preview')`
+   - Dodano diff check do `setActiveHeadingId` — zapobiega zbędnym re-renderom
+
+**Build:** 647 kB single HTML, 3.3 MB DMG ad-hoc signed
+
+---
+
 ## Goal
 
 Build a premium Markdown editor as a standalone macOS app with block-style editable preview, premium UI, and smooth editing experience.

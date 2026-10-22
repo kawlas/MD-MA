@@ -28,21 +28,20 @@ export default function SettingsDialog(props: SettingsDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center modal-overlay"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={onClose}
+      className="fixed z-50 settings-panel"
+      style={{
+        top: 50,
+        right: 12,
+        width: 400,
+        maxHeight: 'calc(100vh - 64px)',
+        overflowY: 'auto',
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        padding: 20,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+      }}
     >
-      <div
-        className="rounded-xl shadow-2xl w-full max-w-lg settings-dropdown"
-        style={{
-          background: 'var(--bg-primary)',
-          border: '1px solid var(--border)',
-          padding: 24,
-          maxHeight: '80vh',
-          overflowY: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
         <div className="flex items-center justify-between mb-4">
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{_t('settings.title')}</h2>
           <button className="toolbar-btn" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
@@ -186,7 +185,6 @@ export default function SettingsDialog(props: SettingsDialogProps) {
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }

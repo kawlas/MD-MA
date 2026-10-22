@@ -107,15 +107,18 @@ function App() {
   const previewRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const dragCounterRef = useRef(0);
-  const editorScrollRafRef = useRef<number | undefined>(undefined);
-  const previewScrollRafRef = useRef<number | undefined>(undefined);
-  // Origin-tracking flags — prevent feedback loop when programmatic scrollTop fires scroll events (WebKit)
-  const editorScrollSuppressed = useRef(false);
-  const previewScrollSuppressed = useRef(false);
+
+  // ── Scroll sync ──────────────────────────────────────────────
+  // Single mutex: when we programmatically set scrollTop, we record
+  // a timestamp + 50ms. Any scroll event from the other pane within
+  // that window is ignored (avoids feedback loops).
+  const scrollLockUntilRef = useRef(0);
+  const scrollRafRef = useRef<number | undefined>(undefined);
+
   // Block map for scroll sync — kept in sync with previewMarkdown
   const previewBlocksRef = useRef<Block[]>([]);
-  // Keep previewBlocks in sync with previewMarkdown
   previewBlocksRef.current = useMemo(() => parseBlocks(previewMarkdown), [previewMarkdown]);
+  // ── End scroll sync ──────────────────────────────────────────
 
   // Persist markdown to localStorage (debounced 500ms)
   const latestMdRef = useRef(markdown);
@@ -177,8 +180,7 @@ function App() {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    if (editorScrollRafRef.current) cancelAnimationFrame(editorScrollRafRef.current);
-    if (previewScrollRafRef.current) cancelAnimationFrame(previewScrollRafRef.current);
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
   }, []);
 
   // Compute effective theme and CSS variables
@@ -521,6 +523,8 @@ function App() {
     reader.readAsText(file);
   }, [markdown, showToast]);
 
+  // ── Scroll sync logic ────────────────────────────────────────
+
   const getEditorLineHeight = useCallback((editor: HTMLTextAreaElement): number => {
     const lh = Number.parseFloat(window.getComputedStyle(editor).lineHeight);
     return Number.isFinite(lh) && lh > 0 ? lh : 22;
@@ -536,121 +540,133 @@ function App() {
     return (source.scrollTop / maxSource) * maxTarget;
   }, []);
 
-  // Editor → Preview: block-based sync with interpolation within blocks.
-  const handleEditorScroll = useCallback(() => {
-    if (editorScrollSuppressed.current) { editorScrollSuppressed.current = false; return; }
-    const editor = editorRef.current;
-    if (!editor) return;
-    const lineHeight = getEditorLineHeight(editor);
-    const topLine = Math.max(0, Math.floor(editor.scrollTop / lineHeight));
-    const activeHeading = [...tocItems].reverse().find(item => item.line <= topLine);
-    setActiveHeadingId(activeHeading?.id);
-    if (viewMode !== 'split') return;
-    const preview = previewRef.current;
-    if (!preview) return;
+  // Core sync: source → target using block map (or ratio fallback)
+  const syncScroll = useCallback((source: 'editor' | 'preview') => {
+    if (Date.now() < scrollLockUntilRef.current) return;
 
-    // Use block map to find which preview block maps to the top editor line
-    const blocks = previewBlocksRef.current;
-    if (blocks.length === 0) return;
-    const blockIdx = blocks.findIndex(b => topLine >= b.startLine && topLine <= b.endLine);
-    if (blockIdx < 0) {
-      // Fallback: ratio-based
-      const target = applyRatioSync(editor, preview);
-      if (target !== null) { previewScrollSuppressed.current = true; preview.scrollTop = target; }
-      return;
-    }
-    const block = blocks[blockIdx];
-    const el = preview.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`);
-    if (!el) {
-      // Fallback: ratio-based
-      const target = applyRatioSync(editor, preview);
-      if (target !== null) { previewScrollSuppressed.current = true; preview.scrollTop = target; }
-      return;
-    }
-    const linesInto = topLine - block.startLine;
-    const span = Math.max(1, block.endLine - block.startLine + 1);
-    let targetTop = el.offsetTop;
-    const nextBlock = blocks[blockIdx + 1];
-    if (nextBlock) {
-      const nextEl = preview.querySelector<HTMLElement>(`[data-block-id="${nextBlock.id}"]`);
-      if (nextEl) {
-        targetTop += (linesInto / span) * (nextEl.offsetTop - el.offsetTop);
+    const editor = editorRef.current;
+    const preview = previewRef.current;
+    if (!editor || !preview) return;
+
+    if (source === 'editor') {
+      const lineHeight = getEditorLineHeight(editor);
+      const topLine = Math.max(0, Math.floor(editor.scrollTop / lineHeight));
+
+      // Update active heading for TOC
+      const activeHeading = [...tocItems].reverse().find(item => item.line <= topLine);
+      if (activeHeading?.id !== activeHeadingId) {
+        setActiveHeadingId(activeHeading?.id);
       }
-    } else if (el.offsetHeight > 0) {
-      targetTop += Math.min((linesInto / span) * el.offsetHeight, el.offsetHeight - preview.clientHeight / 3);
-    }
-    previewScrollSuppressed.current = true;
-    preview.scrollTop = targetTop;
-  }, [viewMode, tocItems, getEditorLineHeight, applyRatioSync]);
 
-  // Preview → Editor: find block at viewport top, map to editor line, set scrollTop.
-  const handlePreviewScroll = useCallback(() => {
-    if (previewScrollSuppressed.current) { previewScrollSuppressed.current = false; return; }
-    const preview = previewRef.current;
-    if (!preview) return;
-    const blockElements = Array.from(preview.querySelectorAll<HTMLElement>('[data-block-id]'));
-    if (blockElements.length === 0) return;
-    const top = preview.scrollTop + 1;
-    let activeEl = blockElements[0];
-    for (const el of blockElements) {
-      if (el.offsetTop <= top) activeEl = el;
-      else break;
-    }
-    const startLine = Number(activeEl.dataset.sourceStartLine) || 0;
-    const activeHeading = [...tocItems].reverse().find(item => item.line <= startLine);
-    setActiveHeadingId(activeHeading?.id);
-    if (viewMode !== 'split') return;
-    const editor = editorRef.current;
-    if (!editor) return;
-    const lineHeight = getEditorLineHeight(editor);
+      if (viewMode !== 'split') return;
 
-    const endLineRaw = activeEl.dataset.sourceEndLine;
-    const endLine = endLineRaw ? Number(endLineRaw) : startLine;
-    const blockLineSpan = Math.max(1, endLine - startLine + 1);
-    const blockOffset = top - activeEl.offsetTop;
-    const blockHeight = activeEl.offsetHeight;
-    let targetLine: number;
-    if (blockHeight > 0) {
-      targetLine = startLine + Math.min(Math.round((blockOffset / blockHeight) * blockLineSpan), blockLineSpan - 1);
+      const blocks = previewBlocksRef.current;
+      if (blocks.length === 0) return;
+
+      const blockIdx = blocks.findIndex(b => topLine >= b.startLine && topLine <= b.endLine);
+      if (blockIdx < 0) {
+        const target = applyRatioSync(editor, preview);
+        if (target !== null) {
+          scrollLockUntilRef.current = Date.now() + 50;
+          preview.scrollTop = target;
+        }
+        return;
+      }
+
+      const block = blocks[blockIdx];
+      const el = preview.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`);
+      if (!el) {
+        const target = applyRatioSync(editor, preview);
+        if (target !== null) {
+          scrollLockUntilRef.current = Date.now() + 50;
+          preview.scrollTop = target;
+        }
+        return;
+      }
+
+      const linesInto = topLine - block.startLine;
+      const span = Math.max(1, block.endLine - block.startLine + 1);
+      let targetTop = el.offsetTop;
+      const nextBlock = blocks[blockIdx + 1];
+      if (nextBlock) {
+        const nextEl = preview.querySelector<HTMLElement>(`[data-block-id="${nextBlock.id}"]`);
+        if (nextEl) {
+          targetTop += (linesInto / span) * (nextEl.offsetTop - el.offsetTop);
+        }
+      } else if (el.offsetHeight > 0) {
+        targetTop += Math.min((linesInto / span) * el.offsetHeight, el.offsetHeight - preview.clientHeight / 3);
+      }
+      scrollLockUntilRef.current = Date.now() + 50;
+      preview.scrollTop = targetTop;
     } else {
-      targetLine = startLine;
+      // source === 'preview'
+      const blockElements = Array.from(preview.querySelectorAll<HTMLElement>('[data-block-id]'));
+      if (blockElements.length === 0) return;
+
+      const top = preview.scrollTop + 1;
+      let activeEl: HTMLElement = blockElements[0];
+      for (const el of blockElements) {
+        if (el.offsetTop <= top) activeEl = el;
+        else break;
+      }
+
+      const startLine = Number(activeEl.dataset.sourceStartLine) || 0;
+
+      // Update active heading for TOC
+      const activeHeading = [...tocItems].reverse().find(item => item.line <= startLine);
+      if (activeHeading?.id !== activeHeadingId) {
+        setActiveHeadingId(activeHeading?.id);
+      }
+
+      if (viewMode !== 'split') return;
+
+      const lineHeight = getEditorLineHeight(editor);
+      const endLineRaw = activeEl.dataset.sourceEndLine;
+      const endLine = endLineRaw ? Number(endLineRaw) : startLine;
+      const blockLineSpan = Math.max(1, endLine - startLine + 1);
+      const blockOffset = top - activeEl.offsetTop;
+      const blockHeight = activeEl.offsetHeight;
+      let targetLine: number;
+      if (blockHeight > 0) {
+        targetLine = startLine + Math.min(Math.round((blockOffset / blockHeight) * blockLineSpan), blockLineSpan - 1);
+      } else {
+        targetLine = startLine;
+      }
+      scrollLockUntilRef.current = Date.now() + 50;
+      editor.scrollTop = targetLine * lineHeight;
     }
-    editorScrollSuppressed.current = true;
-    editor.scrollTop = targetLine * lineHeight;
-  }, [viewMode, tocItems, getEditorLineHeight]);
+  }, [viewMode, tocItems, getEditorLineHeight, applyRatioSync, activeHeadingId]);
 
-  // Ref proxies — always call latest scroll handler
-  const editorScrollRef = useRef<() => void>(() => {});
-  const previewScrollRef = useRef<() => void>(() => {});
-  useEffect(() => { editorScrollRef.current = handleEditorScroll; });
-  useEffect(() => { previewScrollRef.current = handlePreviewScroll; });
+  // RAF-throttled scroll handlers (stable callbacks, always up-to-date via ref)
+  const syncScrollRef = useRef<typeof syncScroll>(syncScroll);
+  useEffect(() => { syncScrollRef.current = syncScroll; });
 
-  // Stable RAF-throttled callbacks for components (never recreate, always up-to-date via refs)
   const onEditorScroll = useCallback(() => {
-    if (editorScrollRafRef.current) return;
-    editorScrollRafRef.current = requestAnimationFrame(() => {
-      editorScrollRafRef.current = undefined;
-      editorScrollRef.current();
-    });
-  }, []);
-  const onPreviewScroll = useCallback(() => {
-    if (previewScrollRafRef.current) return;
-    previewScrollRafRef.current = requestAnimationFrame(() => {
-      previewScrollRafRef.current = undefined;
-      previewScrollRef.current();
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = undefined;
+      syncScrollRef.current('editor');
     });
   }, []);
 
-  // After previewMarkdown catches up (200ms debounce), re-sync preview scroll to editor position.
-  // This prevents drift while content was being typed and DOM was stale.
+  const onPreviewScroll = useCallback(() => {
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = undefined;
+      syncScrollRef.current('preview');
+    });
+  }, []);
+
+  // After previewMarkdown updates, re-sync preview scroll to editor position
   useEffect(() => {
     if (viewMode !== 'split') return;
-    const preview = previewRef.current;
     const editor = editorRef.current;
-    if (!preview || !editor) return;
-    // Wait for next frame so DOM has settled from React re-render
+    const preview = previewRef.current;
+    if (!editor || !preview) return;
+
+    // Wait for DOM to settle after React re-render
     requestAnimationFrame(() => {
-      if (editorScrollSuppressed.current) return;
+      if (Date.now() < scrollLockUntilRef.current) return;
       const lh = getEditorLineHeight(editor);
       const topLine = Math.max(0, Math.floor(editor.scrollTop / lh));
       const blocks = previewBlocksRef.current;
@@ -669,7 +685,7 @@ function App() {
           } else if (el.offsetHeight > 0) {
             targetTop += Math.min((linesInto / span) * el.offsetHeight, el.offsetHeight - preview.clientHeight / 2);
           }
-          previewScrollSuppressed.current = true;
+          scrollLockUntilRef.current = Date.now() + 50;
           preview.scrollTop = targetTop;
           return;
         }
@@ -678,11 +694,13 @@ function App() {
       const maxE = editor.scrollHeight - editor.clientHeight;
       const maxP = preview.scrollHeight - preview.clientHeight;
       if (maxE > 0 && maxP > 0) {
-        previewScrollSuppressed.current = true;
+        scrollLockUntilRef.current = Date.now() + 50;
         preview.scrollTop = (editor.scrollTop / maxE) * maxP;
       }
     });
   }, [previewMarkdown, viewMode, getEditorLineHeight]);
+
+  // ── End scroll sync ──────────────────────────────────────────
 
   // Split resize drag handler
   const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {

@@ -29,7 +29,7 @@ Wyświetlać skróty obok komend w palecie (Cmd+S, Cmd+Z itp.).
 | Motywy | 10 + custom + 6 community |
 | Font sety | 8 |
 | Skróty klawiszowe | 13 |
-| Build (single‑file) | 649 kB |
+| Build (single‑file) | 647 kB |
 | DMG | 3.3 MB (ad-hoc signed) |
 
 ---
@@ -39,12 +39,13 @@ Wyświetlać skróty obok komend w palecie (Cmd+S, Cmd+Z itp.).
 | Decyzja | Uzasadnienie |
 |---|---|
 | Block editing over contentEditable | Zachowuje wierność markdown, czystsza architektura |
-| Origin-tracking flags + block-based scroll sync | Całkowicie eliminuje feedback loop scrolla |
+| Timestamp lock (50ms mutex) over dual suppression flags | Pojedynczy mutex eliminuje pętlę zwrotną bez potrzeby zarządzania dwoma flagami |
 | System fonts | Mały binary, natywny wygląd, single‑file output |
 | Tauri 2 over Electron | Mniejszy binary (~3.4 MB), natywne menu, ad-hoc signing |
-| SettingsDialog as modal | Lepsze UX dla preview motywów i przełącznika języka |
+| SettingsDialog as floating panel (no overlay) | Użytkownik widzi efekt zmiany motywu natychmiast, nie zasłania całej aplikacji |
 | Preview debounce 200ms | ReactMarkdown jest ciężki — nie re-renderuje na każdym znaku |
 | `previewBlocksRef` for scroll sync | Zapewnia zgodność bloków z DOM (który renderuje `previewMarkdown`) |
 | Block-based scroll sync obu kierunków | Ratio-based powodował skoki przy różnej wysokości bloków |
+| Single RAF ref + single syncScroll function | Upraszcza architekturę, eliminuje duplikację logiki między handlerami |
 
 Ostatnia aktualizacja: 30 maja 2026 (iteracja 9)
