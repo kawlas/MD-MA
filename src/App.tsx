@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Toolbar from '@/components/Toolbar';
@@ -117,7 +117,12 @@ function App() {
 
   // Block map for scroll sync — kept in sync with previewMarkdown
   const previewBlocksRef = useRef<Block[]>([]);
-  previewBlocksRef.current = useMemo(() => parseBlocks(previewMarkdown), [previewMarkdown]);
+  const previewBlocks = useMemo(() => parseBlocks(previewMarkdown), [previewMarkdown]);
+  // Mirror the parsed blocks into the ref after commit so it always matches
+  // the rendered preview DOM (refs must not be written during render).
+  useLayoutEffect(() => {
+    previewBlocksRef.current = previewBlocks;
+  }, [previewBlocks]);
   // ── End scroll sync ──────────────────────────────────────────
 
   // Persist markdown to localStorage (debounced 500ms)
