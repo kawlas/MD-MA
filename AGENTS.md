@@ -29,29 +29,37 @@ npm run tauri:build   # alias for tauri build
 
 - **Single-file output**: `vite-plugin-singlefile` inlines all JS/CSS into one HTML file — no code splitting, no dynamic imports.
 - Entry: `index.html` → `src/main.tsx` → `src/App.tsx`.
-- Components: `Toolbar`, `CodeEditor`, `Preview`, `TableOfContents`, `StatusBar` — all under `src/components/`.
+- Components: `Toolbar`, `CodeEditor`, `Preview`, `TableOfContents`, `StatusBar`, `CommandPalette`, `SettingsDialog`, `PreviewComponents` — all under `src/components/`.
 - `cn()` utility (`clsx` + `tailwind-merge`) exists at `src/utils/cn.ts` but is **not used** anywhere — components inline `className` strings directly.
-- State is in `App.tsx` only (no store, no context providers beyond `StrictMode`).
+- State is in `App.tsx` only (no store; `LocaleProvider` wraps the tree for i18n in addition to `StrictMode`).
 
 ## Persistence
+
+All persistence is routed through `safeGetItem`/`safeSetItem` (see `src/utils/storage.ts`).
+Reads happen on mount; writes happen via `useEffect` (content debounced 500 ms).
 
 | localStorage key | Value |
 |---|---|
 | `md-editor-content` | Raw markdown string |
 | `md-editor-theme` | Theme name string |
 | `md-editor-custom-themes` | JSON: `Record<string, ThemeVars>` |
-
-All read on mount and persisted via `useEffect`.
+| `md-editor-font-set` | JSON: selected `FontSet` object |
+| `md-editor-split-ratio` | Number (0–1) |
+| `md-editor-font-size-delta` | Number (steps) |
+| `md-editor-line-height-delta` | Number (steps) |
+| `md-editor-locale` | `"en"` \| `"pl"` |
 
 ## Keyboard shortcuts (all in `App.tsx`)
 
 | Shortcut | Action |
 |---|---|
-| `Cmd/Ctrl+S` | Download file |
+| `Cmd/Ctrl+S` | Save (native in-place save, or Save As fallback) |
+| `Cmd/Ctrl+Shift+S` | Save As (native dialog) |
 | `Cmd/Ctrl+O` | Open file |
 | `Cmd/Ctrl+N` | New file |
 | `Cmd/Ctrl+Shift+C` | Copy rendered as rich text |
 | `Cmd/Ctrl+Shift+P` | Export PDF (triggers `window.print()`) |
+| `Cmd/Ctrl+K` | Open command palette |
 | `F5` | Cycle built-in theme (19 themes + `system` preference, cycled via `THEME_LIST`) |
 
 ## macOS binary (Tauri)
@@ -96,4 +104,4 @@ All custom items relayed to frontend via `handle.emit("menu-event", id)`. Built-
 - Tailwind v4: `@import "tailwindcss"` in CSS (no `tailwind.config.*`).
 - All styling is in `src/index.css` using CSS custom properties (`--bg-primary`, `--accent`, etc.) defined in `src/types.ts` as theme objects.
 - `rehype-highlight` for syntax highlighting (Catppuccin Mocha overrides in CSS).
-- No git remote configured.
+- Git remote: `origin https://github.com/kawlas/MD-MA` (push/fetch).
