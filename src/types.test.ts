@@ -409,13 +409,7 @@ describe("visual presets", () => {
 
   it("marks the new offline-bundled font presets", () => {
     const embedded = FONT_SETS.filter((f) => f.bundled);
-    expect(embedded.map((f) => f.id)).toEqual([
-      "atkinson",
-      "literata",
-      "sourceserif4",
-      "lora",
-      "jetbrains-mono",
-    ]);
+    expect(embedded.map((f) => f.id)).toEqual(["atkinson", "literata", "sourceserif4", "lora", "jetbrains-mono"]);
     expect(FONT_SETS.find((f) => f.id === "atkinson")?.display).toBe("Atkinson Hyperlegible");
     const jetbrains = FONT_SETS.find((f) => f.id === "jetbrains-mono");
     expect(jetbrains?.body.startsWith("'JetBrains Mono'")).toBe(true);
@@ -425,29 +419,26 @@ describe("visual presets", () => {
   });
 
   it("includes modern universal theme presets", () => {
-    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining([
-      "githubDark",
-      "nord",
-      "tokyoNight",
-      "solarizedLight",
-      "solarizedDark",
-    ]));
+    expect(Object.keys(THEMES)).toEqual(
+      expect.arrayContaining(["githubDark", "nord", "tokyoNight", "solarizedLight", "solarizedDark"]),
+    );
   });
 
   it("includes the new refined editorial palettes", () => {
-    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining([
-      "paper",
-      "ink",
-      "neutralLight",
-      "neutralDark",
-    ]));
+    expect(Object.keys(THEMES)).toEqual(expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]));
   });
 });
 
 /** Minimal WCAG 2.x relative-luminance / contrast helpers (sRGB, hex input). */
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
-  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const v =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   const n = parseInt(v, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
@@ -497,31 +488,37 @@ describe("new palettes — WCAG AA", () => {
 describe("debounce", () => {
   it("delays execution by the given ms", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
     expect(count).toBe(0);
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(1);
   });
 
   it("cancels pending execution on cancel()", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
     fn.cancel();
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(0);
   });
 
   it("resets timer on each call (only last fires)", async () => {
     let count = 0;
-    const fn = debounce(() => { count++; }, 50);
+    const fn = debounce(() => {
+      count++;
+    }, 50);
     fn();
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise((r) => setTimeout(r, 30));
     fn();
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise((r) => setTimeout(r, 30));
     fn();
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(1);
   });
 });
@@ -612,9 +609,7 @@ describe("THEME_LIST / F5 cycle", () => {
 
   it("F5 cycle includes all 4 new palettes", () => {
     const builtin = ["system", ...THEME_LIST];
-    expect(builtin).toEqual(
-      expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]),
-    );
+    expect(builtin).toEqual(expect.arrayContaining(["paper", "ink", "neutralLight", "neutralDark"]));
   });
 
   it("THEME_LIST preserves THEMES insertion order", () => {

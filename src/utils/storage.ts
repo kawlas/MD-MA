@@ -12,7 +12,7 @@
  * their work, and offers a "Retry" button that re-probes storage.
  */
 
-export type StorageErrorType = 'quota_exceeded' | 'security' | 'unavailable';
+export type StorageErrorType = "quota_exceeded" | "security" | "unavailable";
 
 export type StorageError = {
   type: StorageErrorType;
@@ -31,9 +31,9 @@ export type StorageState = {
  * can be passed directly to `_t()`.
  */
 export type StorageErrorI18nKey =
-  | 'app.storage.error.quota_exceeded'
-  | 'app.storage.error.security'
-  | 'app.storage.error.unavailable';
+  | "app.storage.error.quota_exceeded"
+  | "app.storage.error.security"
+  | "app.storage.error.unavailable";
 
 // ── Module-level state ─────────────────────────────────────────
 // In a single-file-bundle app there is exactly one App instance, so a
@@ -48,11 +48,11 @@ function classifyError(e: unknown): StorageError {
   const error = e instanceof Error ? e : new Error(String(e));
   const name = error.name;
   const errType: StorageErrorType =
-    name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED'
-      ? 'quota_exceeded'
-      : name === 'SecurityError'
-      ? 'security'
-      : 'unavailable';
+    name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED"
+      ? "quota_exceeded"
+      : name === "SecurityError"
+        ? "security"
+        : "unavailable";
   return { type: errType, message: error.message };
 }
 
@@ -63,8 +63,8 @@ function classifyError(e: unknown): StorageError {
  */
 export function checkStorage(): boolean {
   try {
-    const testKey = '__storage_check__';
-    localStorage.setItem(testKey, '1');
+    const testKey = "__storage_check__";
+    localStorage.setItem(testKey, "1");
     localStorage.removeItem(testKey);
     storageState = { unavailable: false, error: null };
     return true;
@@ -141,14 +141,14 @@ export function isStorageUnavailable(): boolean {
  * Map the current storage error type to an i18n translation key.
  */
 export function getStorageErrorKey(): StorageErrorI18nKey {
-  const type = storageState.error?.type ?? 'unavailable';
+  const type = storageState.error?.type ?? "unavailable";
   switch (type) {
-    case 'quota_exceeded':
-      return 'app.storage.error.quota_exceeded';
-    case 'security':
-      return 'app.storage.error.security';
-    case 'unavailable':
+    case "quota_exceeded":
+      return "app.storage.error.quota_exceeded";
+    case "security":
+      return "app.storage.error.security";
+    case "unavailable":
     default:
-      return 'app.storage.error.unavailable';
+      return "app.storage.error.unavailable";
   }
 }
