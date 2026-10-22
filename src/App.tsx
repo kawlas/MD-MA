@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import Toolbar from "@/components/Toolbar";
 import CodeEditor from "@/components/CodeEditor";
@@ -31,6 +32,7 @@ import {
   getEffectiveTheme,
   extractToc,
   stripMarkdown,
+  isTxt,
   getDropFileType,
   parseBlocks,
 } from "@/types";
@@ -300,9 +302,23 @@ function App() {
   }, [showToast, _t, latestMdRef, theme, customThemes, fontSet, splitRatio, fontSizeDelta, lineHeightDelta]);
 
   // File operations
-  const handleOpenFile = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const handleOpenFile = useCallback(async () => {
+    if (typeof window !== "undefined" && "__TAURI__" in window) {
+      try {
+        const result = await invoke<{ path: string; filename: string; content: string | null }>("open_file");
+        const content = result.content ?? "";
+        setMarkdown(content);
+        setPreviewMarkdown(content);
+        setFileName(result.filename);
+        setIsModified(false);
+        showToast(`${_t("app.toast.opened")}: ${result.filename}`);
+      } catch {
+        showToast(_t("app.toast.open_cancelled"));
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, [showToast, _t]);
 
   const handleFileSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,35 +361,29 @@ function App() {
     doNewFile();
   }, [isModified, markdown, doNewFile]);
 
+  // Save As — always shows a dialog (native or web download)
   const handleSaveAs = useCallback(async (): Promise<boolean> => {
     try {
-      const suggested = fileName || "document.md";
-      const opts: SaveFilePickerOptions = {
-        suggestedName: suggested,
-        types: [
-          {
-            description: _t("app.filetype.markdown"),
-            accept: { "text/markdown": [".md", ".markdown", ".mdown"] },
-          },
-          {
-            description: _t("app.filetype.plain_text"),
-            accept: { "text/plain": [".txt"] },
-          },
-        ],
-      };
-      const isTxt = (name: string) => name.toLowerCase().endsWith(".txt");
-      const content = (name: string) => (isTxt(name) ? stripMarkdown(markdown) : markdown);
-      const handle = await window.showSaveFilePicker?.(opts);
-      if (!handle) {
-        // Fallback: download
+      if (typeof window !== "undefined" && "__TAURI__" in window) {
+        // Native Tauri save dialog — backend writes atomically and authorizes the path
+        const result = await invoke<{ path: string; filename: string; content: string | null }>("save_file_as", {
+          content: markdown,
+        });
+        setFileName(result.filename);
+        setIsModified(false);
+        showToast(`${_t("app.toast.saved")}: ${result.filename}`);
+        return true;
+      } else {
+        // Web download fallback (existing implementation) — now uses isTxt from types
+        const suggested = fileName || "document.md";
         const ext = fileName?.endsWith(".txt") ? ".txt" : ".md";
         const mime = ext === ".txt" ? "text/plain" : "text/markdown";
-        const text = content(fileName || `document${ext}`);
+        const text = isTxt(suggested) ? stripMarkdown(markdown) : markdown;
         const blob = new Blob([text], { type: `${mime};charset=utf-8` });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = fileName || `document${ext}`;
+        a.download = suggested;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -382,19 +392,33 @@ function App() {
         showToast(_t("app.toast.downloaded"));
         return true;
       }
-      const text = content(handle.name);
-      const writable = await handle.createWritable();
-      await writable.write(text);
-      await writable.close();
-      setFileName(handle.name);
-      setIsModified(false);
-      showToast(`${_t("app.toast.saved")}: ${handle.name}`);
-      return true;
     } catch {
       showToast(_t("app.toast.save_cancelled"));
       return false;
     }
-  }, [markdown, fileName, showToast]);
+  }, [markdown, fileName, isTxt, stripMarkdown, showToast, _t]);
+
+  // Save to the current (authorized) document path. If none is open, fall
+  // back to Save As.
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (typeof window !== "undefined" && "__TAURI__" in window) {
+      try {
+        const result = await invoke<{ path: string; filename: string; content: string | null }>("save_file", {
+          content: markdown,
+        });
+        setFileName(result.filename);
+        setIsModified(false);
+        showToast(`${_t("app.toast.saved")}: ${result.filename}`);
+        return true;
+      } catch {
+        // No current document open or save backend error — fall back to Save As dialog
+        return handleSaveAs();
+      }
+    } else {
+      // Web: no backend path, always fall back to download
+      return handleSaveAs();
+    }
+  }, [markdown, handleSaveAs, showToast, _t]);
 
   const handleConfirmDiscard = useCallback(() => {
     if (pendingAction === "new") doNewFile();
@@ -406,11 +430,19 @@ function App() {
   }, []);
 
   const handleConfirmSave = useCallback(async () => {
-    const saved = await handleSaveAs();
+    const saved = await handleSave();
+    if (saved === false) {
+      // handleSave may have fallen back to SaveAs — if that also failed or was cancelled, abort
+      if (!fileName && pendingAction === "new") {
+        // SaveAs was shown and cancelled — just cancel the pending action
+        setPendingAction(null);
+      }
+      return;
+    }
     if (saved && pendingAction === "new") {
       doNewFile();
     }
-  }, [handleSaveAs, pendingAction, doNewFile]);
+  }, [handleSave, pendingAction, doNewFile, fileName]);
 
   // Export PDF via print
   const handleExportPdf = useCallback(() => {
@@ -892,7 +924,7 @@ function App() {
         shortcut: "⌘O",
         action: handleOpenFile,
       },
-      { id: "save", label: _t("palette.save"), category: _t("palette.file"), shortcut: "⌘S", action: handleSaveAs },
+      { id: "save", label: _t("palette.save"), category: _t("palette.file"), shortcut: "⌘S", action: handleSave },
       {
         id: "save-as",
         label: _t("palette.save_as"),
@@ -926,6 +958,7 @@ function App() {
     [
       handleNewFile,
       handleOpenFile,
+      handleSave,
       handleSaveAs,
       handleExportPdf,
       handleCopyRendered,
@@ -1010,6 +1043,8 @@ function App() {
               handleOpenFile();
               break;
             case "save":
+              handleSave();
+              break;
             case "save_as":
               handleSaveAs();
               break;
@@ -1055,7 +1090,7 @@ function App() {
     return () => {
       unlisten?.();
     };
-  }, [handleSaveAs, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf, handleUndo, handleRedo]);
+  }, [handleSave, handleSaveAs, handleOpenFile, handleNewFile, handleCopyRendered, handleExportPdf, handleUndo, handleRedo]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1063,6 +1098,11 @@ function App() {
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
       if (mod && key === "s") {
+        e.preventDefault();
+        handleSave();
+        return;
+      }
+      if (mod && e.shiftKey && key === "s") {
         e.preventDefault();
         handleSaveAs();
         return;
@@ -1146,7 +1186,7 @@ function App() {
         setTheme={setTheme}
         onOpenFile={handleOpenFile}
         onCopyRendered={handleCopyRendered}
-        onSaveAs={handleSaveAs}
+        onSave={handleSave}
         onExportPdf={handleExportPdf}
         onNewFile={handleNewFile}
         showToc={showToc}

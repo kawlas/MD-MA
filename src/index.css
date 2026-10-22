@@ -474,33 +474,37 @@ body {
   vertical-align: middle;
 }
 
-/* === Callouts === */
+/* === Callouts ===
+   Reading content: no colored card backgrounds. The colored left border
+   alone carries the semantic type (note/tip/important/warning/caution).
+   Background is kept to --bg-primary so callouts sit flush with the
+   document canvas, producing an elegant one-page typographic flow. */
 .callout {
   margin: 1em 0;
-  padding: 14px 16px;
-  border-radius: 6px;
-  border-left: 4px solid;
-  background: var(--callout-note-bg);
+  padding: 10px 12px;
+  border-radius: 0;
+  border-left: 3px solid;
+  background: var(--bg-primary);
   border-color: var(--callout-note-border);
 }
 
 .callout[data-callout="tip"] {
-  background: var(--callout-tip-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-tip-border);
 }
 
 .callout[data-callout="important"] {
-  background: var(--callout-important-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-important-border);
 }
 
 .callout[data-callout="warning"] {
-  background: var(--callout-warning-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-warning-border);
 }
 
 .callout[data-callout="caution"] {
-  background: var(--callout-caution-bg);
+  background: var(--bg-primary);
   border-color: var(--callout-caution-border);
 }
 

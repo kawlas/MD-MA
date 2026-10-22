@@ -9,7 +9,7 @@ interface ToolbarProps {
   setTheme: (theme: string) => void;
   onOpenFile: () => void;
   onCopyRendered: () => void;
-  onSaveAs: () => void;
+  onSave: () => void;
   onExportPdf: () => void;
   onNewFile: () => void;
   showToc: boolean;
@@ -30,7 +30,7 @@ export default memo(function Toolbar({
   setViewMode,
   onOpenFile,
   onCopyRendered,
-  onSaveAs,
+  onSave,
   onExportPdf,
   onNewFile,
   showToc,
@@ -146,7 +146,7 @@ export default memo(function Toolbar({
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
         </button>
-        <button className="toolbar-btn" onClick={onSaveAs} title={_t("toolbar.save") + " (Cmd+S)"}>
+        <button className="toolbar-btn" onClick={onSave} title={_t("toolbar.save") + " (Cmd+S)"}>
           <svg
             viewBox="0 0 24 24"
             fill="none"

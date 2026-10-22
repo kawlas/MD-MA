@@ -1077,6 +1077,11 @@ export function getFileFormat(fileName: string | null | undefined): "MD" | "TXT"
   return fileName.toLowerCase().endsWith(".txt") ? "TXT" : "MD";
 }
 
+/** Returns true when the given filename denotes a plain-text document. */
+export function isTxt(fileName: string | null | undefined): boolean {
+  return fileName?.toLowerCase().endsWith(".txt") ?? false;
+}
+
 export type DropFileType = "image" | "text" | null;
 
 export function getDropFileType(fileName: string, mimeType: string): DropFileType {

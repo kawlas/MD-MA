@@ -1,12 +1,39 @@
 name: Tauri Build
 
+# Builds a macOS Tauri DMG. This workflow NEVER creates, drafts, or publishes a
+# GitHub Release — it only produces an ad-hoc signed DMG and uploads it as a
+# plain CI build artifact.
+#
+# Triggering:
+#   - `push` on a `v*` tag  -> build (ad-hoc) -> notarize (if Apple secrets exist)
+#   - `workflow_dispatch`    -> build (ad-hoc) -> NOTARIZE ONLY IF you set
+#                            `notarize: true`. Default is false, so a manual run
+#                            never notarizes and never publishes a release.
+#
+# Safety guarantees:
+#   * No `${{ secrets.* }}` appears inside any `if:` expression (secrets are
+#     only injected into the job env, and the notarize step re-checks them at
+#     runtime and exits 0 when missing).
+#   * Notarization is optional: it runs on tag pushes, or on manual runs only
+#     when explicitly requested AND the Apple secrets are present.
+#   * `permissions: contents: read` prevents any release-writing API calls.
+
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      notarize:
+        description: 'Submit DMG for Apple notarization (requires Apple secrets)'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: read # checkout only; cannot publish releases
     steps:
       - uses: actions/checkout@v4
 
@@ -24,27 +51,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Tauri binary (ad-hoc signed)
-        run: npm run tauri build
+      - name: Build Tauri DMG (ad-hoc signed)
         env:
           APPLE_SIGNING_IDENTITY: '-'
+        run: npm run tauri build
 
       - name: Notarize DMG
-        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        if: github.event_name == 'push' || github.event.inputs.notarize == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          # Submit for notarization
-          xcrun notarytool submit \
-            src-tauri/target/release/bundle/dmg/*.dmg \
-            --apple-id "${{ secrets.APPLE_ID }}" \
-            --password "${{ secrets.APPLE_PASSWORD }}" \
-            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "Apple notarization secrets not configured. Skipping notarization."
+            exit 0
+          fi
+          DMG=$(ls src-tauri/target/release/bundle/dmg/*.dmg)
+          echo "Notarizing $DMG"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
             --wait
-
-          # Staple the notarization ticket to the DMG
-          xcrun stapler staple src-tauri/target/release/bundle/dmg/*.dmg
+          xcrun stapler staple "$DMG"
         shell: bash
 
       - name: Upload DMG
+        # Artifact (NOT a release). Safe to run on manual triggers.
         uses: actions/upload-artifact@v4
         with:
           name: MD-MA-dmg

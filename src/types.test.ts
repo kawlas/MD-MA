@@ -13,6 +13,7 @@ import {
   getListContinuation,
   formatInsertion,
   getFileFormat,
+  isTxt,
   stripMarkdown,
   debounce,
   getDropFileType,
@@ -336,6 +337,32 @@ describe("getFileFormat", () => {
 
   it("returns null for null fileName", () => {
     expect(getFileFormat(null)).toBeNull();
+  });
+});
+
+describe("isTxt", () => {
+  it("returns true for .txt files", () => {
+    expect(isTxt("notes.txt")).toBe(true);
+  });
+
+  it("returns true for uppercase .TXT", () => {
+    expect(isTxt("README.TXT")).toBe(true);
+  });
+
+  it("returns false for .md files", () => {
+    expect(isTxt("readme.md")).toBe(false);
+  });
+
+  it("returns false for .markdown files", () => {
+    expect(isTxt("readme.markdown")).toBe(false);
+  });
+
+  it("returns false for null fileName", () => {
+    expect(isTxt(null)).toBe(false);
+  });
+
+  it("returns false for undefined fileName", () => {
+    expect(isTxt(undefined)).toBe(false);
   });
 });
 

@@ -12,6 +12,8 @@ const EN_KEYS: TranslationKey[] = [
   "app.toast.saved",
   "app.toast.downloaded",
   "app.toast.save_cancelled",
+  "app.toast.open_cancelled",
+  "app.toast.save_failed",
   "app.toast.new_document",
   "app.toast.copied_rich",
   "app.toast.copied_plain",

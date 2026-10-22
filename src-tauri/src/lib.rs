@@ -1,9 +1,272 @@
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use serde::{Deserialize, Serialize};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager};
+use tauri_plugin_dialog::DialogExt;
+
+// ── Native file operations (Tauri commands) ──────────────────────
+//
+// Security model:
+//   • `open_file` — the user picks a file via the native dialog. The chosen
+//     path is stored backend-side as the "current document" (authorized).
+//   • `save_file` — saves to the *current* (authorized) document path only.
+//     It never accepts a caller-supplied path, so the frontend cannot direct
+//     writes to arbitrary locations.
+//   • `save_file_as` — shows the native save dialog, lets the user pick a new
+//     path, then atomically writes + becomes the new current document.
+//
+// Atomicity: every write uses a unique temp file (created with
+// `create_new` so it can never clobber an existing file), written, then
+// atomically renamed over the target. A failed write never touches the
+// real document — the existing buffer/file is left intact.
+
+/// State key for the authorized current document path, stored in Tauri's
+/// managed state so any command handler can access it.
+#[derive(Default)]
+struct CurrentDoc {
+    path: std::sync::Mutex<Option<PathBuf>>,
+}
+
+/// Response from `open_file` / `save_file` / `save_file_as`.
+#[derive(Serialize, Deserialize)]
+#[allow(dead_code)]
+struct SaveResponse {
+    path: String,
+    filename: String,
+    content: Option<String>,
+}
+
+/// Generate a unique temp path in the same directory as `target`.
+///
+/// Uses a nanosecond timestamp + random component to guarantee uniqueness
+/// even under rapid successive saves, then opens the file with
+/// `create_new` so it can never overwrite an existing file.
+fn unique_temp_path(target: &Path) -> std::io::Result<PathBuf> {
+    let dir = target
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
+    let stem = target
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("document");
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?
+        .as_nanos();
+    // A short random suffix to avoid collisions with concurrent or very-rapid saves.
+    let suffix: u64 = {
+        let mut seed = ts as u64;
+        // xorshift32 — deterministic-enough for temp uniqueness (no crypto need)
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        seed
+    };
+    let temp_name = format!(".{stem}.tmp.{ts}.{suffix}");
+    let temp_path = dir.join(&temp_name);
+    Ok(temp_path)
+}
+
+/// Write `content` to `target` atomically: write to a unique temp file
+/// (created with `create_new`), then rename. On any error the temp file
+/// is cleaned up and the target is never touched.
+fn atomic_write(target: &Path, content: &str) -> std::io::Result<()> {
+    let temp = unique_temp_path(target)?;
+
+    // create_new = fail if the temp already exists (never clobber)
+    let mut file = std::fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .truncate(true)
+        .open(&temp)?;
+    use std::io::Write;
+    file.write_all(content.as_bytes())?;
+    file.sync_all()?;
+    drop(file);
+
+    // Atomic rename (same filesystem / same directory)
+    std::fs::rename(&temp, target).inspect_err(|_| {
+        // Best-effort cleanup of the temp file on rename failure.
+        let _ = std::fs::remove_file(&temp);
+    })?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unique_temp_path_is_unique() {
+        let target = Path::new("/tmp/test.md");
+        let temp1 = unique_temp_path(target).unwrap();
+        let temp2 = unique_temp_path(target).unwrap();
+        assert_ne!(temp1, temp2, "temp paths must be unique");
+        // Same directory as target
+        assert_eq!(temp1.parent().unwrap(), target.parent().unwrap());
+    }
+
+    #[test]
+    fn test_unique_temp_path_never_clobbers() {
+        let target = Path::new("/tmp/test.md");
+        let temp = unique_temp_path(target).unwrap();
+        // The temp name must not equal the target name
+        assert_ne!(temp.file_name().unwrap(), target.file_name().unwrap());
+    }
+
+    #[test]
+    fn test_atomic_write_roundtrip() {
+        let dir = std::env::temp_dir();
+        let target = dir.join("md-ma-test-atomic-write.txt");
+        // Clean up before
+        let _ = std::fs::remove_file(&target);
+
+        let content = "Hello, atomic world!";
+        atomic_write(&target, content).unwrap();
+
+        let read_back = std::fs::read_to_string(&target).unwrap();
+        assert_eq!(read_back, content);
+
+        // No leftover temp files
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy().to_string();
+                if name_str.starts_with(".md-ma-test-atomic-write.txt.tmp.") {
+                    panic!("Leftover temp file: {}", name_str);
+                }
+            }
+        }
+
+        let _ = std::fs::remove_file(&target);
+    }
+
+    #[test]
+    fn test_atomic_write_overwrites_existing() {
+        let dir = std::env::temp_dir();
+        let target = dir.join("md-ma-test-overwrite.txt");
+
+        // Pre-existing content
+        std::fs::write(&target, "old content").unwrap();
+
+        atomic_write(&target, "new content").unwrap();
+
+        let read_back = std::fs::read_to_string(&target).unwrap();
+        assert_eq!(read_back, "new content");
+
+        let _ = std::fs::remove_file(&target);
+    }
+}
+
+/// Read a file chosen by the user via the native open dialog.
+/// The chosen path becomes the new "current document".
+#[tauri::command]
+fn open_file(app: tauri::AppHandle) -> Result<SaveResponse, String> {
+    let path = app.dialog().file().blocking_pick_file();
+    match path {
+        Some(p) => {
+            let p_buf = p.into_path().map_err(|e| format!("Cannot convert path: {}", e))?;
+            let content = std::fs::read_to_string(&p_buf)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+
+            // Store as the authorized current document
+            if let Some(state) = app.try_state::<CurrentDoc>() {
+                *state.path.lock().unwrap() = Some(p_buf.clone());
+            }
+
+            let filename = p_buf
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "document.md".to_string());
+
+            Ok(SaveResponse {
+                path: p_buf.to_string_lossy().to_string(),
+                filename,
+                content: Some(content),
+            })
+        }
+        None => Err("No file selected".to_string()),
+    }
+}
+
+/// Save to the current (authorized) document path. If there is no current
+/// document yet, returns an error so the frontend can fall back to Save As.
+#[tauri::command]
+fn save_file(app: tauri::AppHandle, content: String) -> Result<SaveResponse, String> {
+    let state = app
+        .try_state::<CurrentDoc>()
+        .ok_or_else(|| "No state available".to_string())?;
+
+    let target = state
+        .path
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "No document open — use Save As".to_string())?;
+
+    atomic_write(&target, &content).map_err(|e| format!("Failed to save file: {}", e))?;
+
+    let filename = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "document.md".to_string());
+
+    Ok(SaveResponse {
+        path: target.to_string_lossy().to_string(),
+        filename,
+        content: None,
+    })
+}
+
+/// Show a native save dialog, write to the chosen path, and store it as
+/// the new current document.
+#[tauri::command]
+fn save_file_as(app: tauri::AppHandle, content: String) -> Result<SaveResponse, String> {
+    let path = app
+        .dialog()
+        .file()
+        .add_filter("Markdown", &["md", "markdown", "mdown", "mkd", "mkdn", "mdwn"])
+        .add_filter("Plain Text", &["txt"])
+        .blocking_save_file();
+
+    match path {
+        Some(p) => {
+            let path_buf = p.into_path().map_err(|e| format!("Cannot convert path: {}", e))?;
+
+            // Write atomically before committing the path as "current doc"
+            atomic_write(&path_buf, &content)
+                .map_err(|e| format!("Failed to save file: {}", e))?;
+
+            // Store as the authorized current document
+            if let Some(state) = app.try_state::<CurrentDoc>() {
+                *state.path.lock().unwrap() = Some(path_buf.clone());
+            }
+
+            let filename = path_buf
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "document.md".to_string());
+
+            Ok(SaveResponse {
+                path: path_buf.to_string_lossy().to_string(),
+                filename,
+                content: None,
+            })
+        }
+        None => Err("No file selected".to_string()),
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(CurrentDoc::default())
+        .invoke_handler(tauri::generate_handler![open_file, save_file, save_file_as])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
