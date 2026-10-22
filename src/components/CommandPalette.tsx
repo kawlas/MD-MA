@@ -71,7 +71,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
       onClick={handleOverlayClick}
     >
       <div
-        className="rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className="rounded-lg shadow-md w-full max-w-lg overflow-hidden border border-[var(--border)]"
         style={{
           background: 'var(--bg-primary)',
           border: '1px solid var(--border)',

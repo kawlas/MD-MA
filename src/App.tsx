@@ -61,7 +61,7 @@ function App() {
         return FONT_SETS.find(f => f.label === parsed.label) || FONT_SETS[0];
       }
     } catch { /* ignore */ }
-    return FONT_SETS[0];
+    return FONT_SETS.find(f => f.label === 'New York') || FONT_SETS[0];
   });
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showFontDialog, setShowFontDialog] = useState(false);
@@ -170,10 +170,14 @@ function App() {
     const codeSize = Math.max(9, fontSet.codeSize + fontSizeDelta * 0.8);
     const lineH = Math.max(1.2, fontSet.lineHeight + lineHeightDelta * 0.1);
     root.style.setProperty('--font-body', fontSet.body);
+    root.style.setProperty('--font-text', fontSet.body);
     root.style.setProperty('--font-code', fontSet.code);
     root.style.setProperty('--font-size-body', `${bodySize}px`);
+    root.style.setProperty('--font-size-text', `${bodySize}px`);
     root.style.setProperty('--font-size-code', `${codeSize}px`);
     root.style.setProperty('--line-height-body', `${lineH}`);
+    root.style.setProperty('--line-height-text', `${lineH}`);
+    root.style.setProperty('--line-height-code', `${lineH}`);
   }, [fontSet, fontSizeDelta, lineHeightDelta]);
 
   // Persist font/line deltas
@@ -1000,7 +1004,7 @@ function App() {
           onClick={() => setShowThemeDialog(false)}
         >
           <div
-            className="rounded-xl shadow-2xl w-full max-w-lg"
+            className="rounded-lg shadow-md w-full max-w-lg border border-[var(--border)]"
             style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1095,7 +1099,7 @@ function App() {
           onClick={handleConfirmCancel}
         >
           <div
-            className="rounded-xl shadow-2xl w-full max-w-sm"
+            className="rounded-lg shadow-md w-full max-w-sm border border-[var(--border)]"
             style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1148,7 +1152,7 @@ function App() {
           onClick={() => setShowFontDialog(false)}
         >
           <div
-            className="rounded-xl shadow-2xl w-full max-w-md"
+            className="rounded-lg shadow-md w-full max-w-md border border-[var(--border)]"
             style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >

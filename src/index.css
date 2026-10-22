@@ -40,13 +40,18 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* === Default font vars === */
+/* === Font roles (system only; no downloads) === */
 :root {
-  --font-body: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
-  --font-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --font-size-body: 16px;
-  --font-size-code: 14px;
-  --line-height-body: 1.72;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-text: 'New York', 'Iowan Old Style', 'Georgia', 'Times New Roman', serif;
+  --font-code: 'SF Mono', Menlo, Monaco, 'Consolas', monospace;
+  --font-size-ui: 13px;
+  --font-size-text: 16px;
+  --font-size-code: 13.5px;
+  --line-height-ui: 1.3;
+  --line-height-text: 1.65;
+  --line-height-code: 1.6;
+  --measure: 68ch;
 }
 
 /* === Code Editor Textarea === */
@@ -55,14 +60,14 @@ body {
   color: var(--text-primary);
   font-family: var(--font-code);
   font-size: var(--font-size-code);
-  line-height: var(--line-height-body);
+  line-height: var(--line-height-code);
   tab-size: 2;
   resize: none;
   outline: none;
   border: none;
   width: 100%;
   height: 100%;
-  padding: 24px 24px;
+  padding: 24px;
   caret-color: var(--accent);
 }
 
@@ -74,73 +79,86 @@ body {
   background: var(--accent-selection);
 }
 
-/* === Markdown Preview — Apple-level refinement === */
+/* === Markdown Preview === */
 .md-preview {
-  font-family: var(--font-body);
-  font-size: var(--font-size-body);
-  line-height: 1.75;
+  font-family: var(--font-text);
+  font-size: var(--font-size-text);
+  line-height: var(--line-height-text);
   color: var(--text-primary);
   word-wrap: break-word;
-  font-feature-settings: 'kern' 1, 'liga' 1, 'pnum' 1;
+  font-feature-settings: 'kern' 1, 'liga' 1;
   -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
+  max-width: var(--measure);
+  margin-inline: auto;
 }
 
 .md-preview > *:first-child {
   margin-top: 0 !important;
 }
 
-/* Headings — refined modular scale: 1.25 */
-.md-preview h1 {
-  font-size: 2.25em;
-  font-weight: 700;
-  margin: 1.6em 0 0.4em;
-  padding-bottom: 0.25em;
-  border-bottom: 1px solid var(--border);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
+/* Text measure: comfortable default; tables/code may exceed */
+.md-preview p,
+.md-preview li,
+.md-preview blockquote,
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  max-width: var(--measure);
 }
 
-.md-preview h2 {
-  font-size: 1.65em;
-  font-weight: 650;
-  margin: 1.5em 0 0.4em;
-  padding-bottom: 0.2em;
-  border-bottom: 1px solid var(--border);
-  line-height: 1.2;
+.md-preview pre,
+.md-preview table,
+.md-preview img {
+  max-width: 100%;
+}
+
+/* Headings — 8px rhythm, no decoration */
+.md-preview h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 2rem 0 0.5rem;
+  line-height: 1.15;
   letter-spacing: -0.015em;
 }
 
-.md-preview h3 {
-  font-size: 1.3em;
+.md-preview h2 {
+  font-size: 1.375rem;
   font-weight: 600;
-  margin: 1.3em 0 0.35em;
-  line-height: 1.3;
+  margin: 2rem 0 0.5rem;
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
-.md-preview h4 {
-  font-size: 1.1em;
+.md-preview h3 {
+  font-size: 1.125rem;
   font-weight: 600;
-  margin: 1.2em 0 0.3em;
+  margin: 1.5rem 0 0.4rem;
+  line-height: 1.3;
+}
+
+.md-preview h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.35rem;
   line-height: 1.35;
-  color: var(--text-primary);
 }
 
 .md-preview h5 {
-  font-size: 1em;
-  font-weight: 600;
-  margin: 1em 0 0.3em;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 1rem 0 0.3rem;
   color: var(--text-secondary);
 }
 
 .md-preview h6 {
-  font-size: 0.85em;
-  font-weight: 600;
-  margin: 1em 0 0.3em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin: 1rem 0 0.3rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .md-preview p {
@@ -148,20 +166,16 @@ body {
   line-height: 1.75;
 }
 
-/* Links — refined Apple-style underline animation */
+/* Links — simple, no animation */
 .md-preview a {
   color: var(--accent);
-  text-decoration: none;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-position: 0% 100%;
-  background-repeat: no-repeat;
-  background-size: 0% 1.5px;
-  transition: background-size 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.2s ease;
-  padding-bottom: 1px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
 }
 
 .md-preview a:hover {
-  background-size: 100% 1.5px;
+  text-decoration-color: var(--accent);
   color: var(--accent-hover);
 }
 
@@ -173,14 +187,13 @@ body {
   color: var(--text-secondary);
 }
 
-/* Blockquotes — elegant minimal */
+/* Blockquotes — minimal */
 .md-preview blockquote {
-  margin: 1.25em 0;
-  padding: 14px 20px;
-  border-left: 3px solid var(--accent);
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 2px solid var(--accent);
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-primary));
-  border-radius: 0 10px 10px 0;
+  background: transparent;
 }
 
 .md-preview blockquote p { margin: 0.25em 0; }
@@ -221,12 +234,12 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Code blocks — refined Apple style */
+/* Code blocks — plain */
 .md-preview pre {
-  margin: 1.25em 0;
-  border-radius: 14px;
+  margin: 1.25rem 0;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
 }
 
 .code-block-wrapper {
@@ -234,42 +247,41 @@ body {
 }
 
 .code-block-wrapper:hover .code-copy-btn {
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 .code-copy-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  padding: 4px 10px;
+  transition: opacity 0.15s ease;
+  padding: 3px 8px;
   font-size: 11px;
   font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(0,0,0,0.3);
-  color: rgba(255,255,255,0.7);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .code-copy-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: white;
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .md-preview pre code {
   display: block;
   background: var(--code-bg, #1e1e2e) !important;
   color: #cdd6f4 !important;
-  padding: 18px 22px;
-  border-radius: 14px;
+  padding: 14px 16px;
+  border-radius: 8px;
   border: none;
   overflow-x: auto;
-  font-size: 13px;
-  line-height: 1.65;
+  font-family: var(--font-code);
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-code);
 }
 
 /* Code language label — subtle pill */
@@ -327,7 +339,7 @@ body {
   margin: 1.25em 0;
   display: block;
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 0.9em;
 }
 
@@ -370,7 +382,7 @@ body {
 .callout {
   margin: 1em 0;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   border-left: 4px solid;
   background: var(--callout-note-bg);
   border-color: var(--callout-note-border);
@@ -421,21 +433,19 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border: 2px dashed var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: overlayIn 0.2s ease;
+  animation: overlayIn 0.15s ease;
 }
 
 .drag-overlay-content {
   background: var(--bg-primary);
   padding: 28px 44px;
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
   text-align: center;
   font-size: 16px;
@@ -453,7 +463,7 @@ body {
   background: var(--text-primary);
   color: var(--bg-primary);
   padding: 10px 24px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -491,27 +501,17 @@ body {
 
 /* === Toolbar Container === */
 .toolbar-container {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  min-height: 50px;
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 14px;
+  padding: 0 12px;
   user-select: none;
   z-index: 100;
   position: relative;
   flex-wrap: nowrap;
-}
-
-.toolbar-container::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--border);
 }
 
 .toolbar-logo {
@@ -540,18 +540,16 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   border: 1px solid var(--border);
   background: var(--bg-primary);
   color: var(--text-secondary);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .focus-exit-btn:hover {
@@ -667,9 +665,8 @@ body {
 .md-preview img {
   max-width: 100%;
   height: auto;
-  border-radius: 12px;
-  margin: 1.2em 0;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  border-radius: 6px;
+  margin: 1rem 0;
 }
 
 
@@ -734,9 +731,9 @@ body {
   padding-right: 8px;
   font-family: var(--font-code);
   font-size: var(--font-size-code);
-  line-height: var(--line-height-body);
+  line-height: var(--line-height-code);
   color: var(--text-muted);
-  opacity: 0.35;
+  opacity: 0.4;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
 }

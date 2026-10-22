@@ -149,7 +149,7 @@ const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, on
       {/* Line number gutter */}
       <div
         ref={gutterRef}
-        className="flex flex-col items-end flex-shrink-0 select-none overflow-hidden pt-[24px] pr-2 text-xs leading-[var(--line-height-body)]"
+        className="flex flex-col items-end flex-shrink-0 select-none overflow-hidden pt-[24px] pr-2 text-xs leading-[var(--line-height-code)]"
         style={{
           width: gutterWidth,
           color: 'var(--text-muted)',
@@ -157,13 +157,13 @@ const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(({ value, on
           borderRight: '1px solid var(--border)',
           fontFamily: 'var(--font-code)',
           fontSize: 'var(--font-size-code)',
-          lineHeight: 'var(--line-height-body)',
+          lineHeight: 'var(--line-height-code)',
           opacity: 0.5,
         }}
         onScroll={handleGutterScroll}
       >
         {Array.from({ length: lineCount }, (_, i) => (
-          <span key={i} className="leading-[var(--line-height-body)] block px-1" style={{ lineHeight: 'var(--line-height-body)' }}>
+          <span key={i} className="leading-[var(--line-height-code)] block px-1" style={{ lineHeight: 'var(--line-height-code)' }}>
             {i + 1}
           </span>
         ))}
